@@ -73,10 +73,10 @@ func (d *Deployer) log(str string, args ...interface{}) {
 	log.Printf(str, args...)
 }
 
-func (d *Deployer) Deploy(ctx context.Context, blueprintName string) (*Deployment, error) {
+func (d *Deployer) Deploy(ctx context.Context, blueprintName string, namespaceCounter string) (*Deployment, error) {
 	dep := &Deployment{
 		Deployer:      d,
-		BlueprintName: blueprintName,
+		BlueprintName: blueprintName + namespaceCounter,
 		HS:            make(map[string]*HomeserverDeployment),
 		Config:        d.config,
 	}
@@ -92,10 +92,6 @@ func (d *Deployer) Deploy(ctx context.Context, blueprintName string) (*Deploymen
 	if len(images) == 0 {
 		return nil, fmt.Errorf("Deploy: No images have been built for blueprint %s", blueprintName)
 	}
-	networkName, err := createNetworkIfNotExists(d.Docker, d.config.PackageNamespace, blueprintName)
-	if err != nil {
-		return nil, fmt.Errorf("Deploy: %w", err)
-	}
 
 	// deploy images in parallel
 	var mu sync.Mutex // protects mutable values like the counter and errors
@@ -106,6 +102,10 @@ func (d *Deployer) Deploy(ctx context.Context, blueprintName string) (*Deploymen
 		mu.Lock()
 		d.Counter++
 		counter := d.Counter
+	    networkName, err := createNetworkIfNotExists(d.Docker, d.config.PackageNamespace, fmt.Sprintf("%s_%s", namespaceCounter, blueprintName))
+	    if err != nil {
+		    return fmt.Errorf("Deploy: Failed to create network %w", err)
+	    }
 		mu.Unlock()
 		contextStr := img.Labels["complement_context"]
 		hsName := img.Labels["complement_hs_name"]

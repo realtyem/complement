@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"log"
 	"strings"
-	"time"
+    "time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
@@ -169,7 +169,7 @@ func (d *Builder) removeContainers() error {
 	return nil
 }
 
-func (d *Builder) ConstructBlueprintIfNotExist(bprint b.Blueprint) error {
+func (d *Builder) ConstructBlueprintIfNotExist(bprint b.Blueprint, namespace_counter string) error {
 	images, err := d.Docker.ImageList(context.Background(), types.ImageListOptions{
 		Filters: label(
 			"complement_blueprint="+bprint.Name,
@@ -180,7 +180,7 @@ func (d *Builder) ConstructBlueprintIfNotExist(bprint b.Blueprint) error {
 		return fmt.Errorf("ConstructBlueprintIfNotExist(%s): failed to ImageList: %w", bprint.Name, err)
 	}
 	if len(images) == 0 {
-		err = d.ConstructBlueprint(bprint)
+		err = d.ConstructBlueprint(bprint, namespace_counter)
 		if err != nil {
 			return fmt.Errorf("ConstructBlueprintIfNotExist(%s): failed to ConstructBlueprint: %w", bprint.Name, err)
 		}
@@ -188,8 +188,8 @@ func (d *Builder) ConstructBlueprintIfNotExist(bprint b.Blueprint) error {
 	return nil
 }
 
-func (d *Builder) ConstructBlueprint(bprint b.Blueprint) error {
-	errs := d.construct(bprint)
+func (d *Builder) ConstructBlueprint(bprint b.Blueprint, namespace_counter string) error {
+	errs := d.construct(bprint, namespace_counter)
 	if len(errs) > 0 {
 		for _, err := range errs {
 			d.log("could not construct blueprint: %s", err)
@@ -201,7 +201,7 @@ func (d *Builder) ConstructBlueprint(bprint b.Blueprint) error {
 	foundImages := false
 	var images []types.ImageSummary
 	var err error
-	waitTime := 5 * time.Second
+	waitTime := 20 * time.Second
 	startTime := time.Now()
 	for time.Since(startTime) < waitTime {
 		images, err = d.Docker.ImageList(context.Background(), types.ImageListOptions{
@@ -236,10 +236,10 @@ func (d *Builder) ConstructBlueprint(bprint b.Blueprint) error {
 }
 
 // construct all Homeservers sequentially then commits them
-func (d *Builder) construct(bprint b.Blueprint) (errs []error) {
-	d.log("Constructing blueprint '%s'", bprint.Name)
+func (d *Builder) construct(bprint b.Blueprint, namespace_counter string) (errs []error) {
+	d.log("Constructing blueprint '%s' with counter %s", bprint.Name, namespace_counter)
 
-	networkName, err := createNetworkIfNotExists(d.Docker, d.Config.PackageNamespace, bprint.Name)
+	networkName, err := createNetworkIfNotExists(d.Docker, d.Config.PackageNamespace, fmt.Sprintf("%s_%s", namespace_counter, bprint.Name))
 	if err != nil {
 		return []error{err}
 	}
@@ -247,7 +247,7 @@ func (d *Builder) construct(bprint b.Blueprint) (errs []error) {
 	runner := instruction.NewRunner(bprint.Name, d.Config.BestEffort, d.Config.DebugLoggingEnabled)
 	results := make([]result, len(bprint.Homeservers))
 	for i, hs := range bprint.Homeservers {
-		res := d.constructHomeserver(bprint.Name, runner, hs, networkName)
+		res := d.constructHomeserver(bprint.Name, runner, hs, networkName, namespace_counter)
 		if res.err != nil {
 			errs = append(errs, res.err)
 			if res.containerID != "" {
@@ -360,8 +360,8 @@ func toChanges(labels map[string]string) []string {
 }
 
 // construct this homeserver and execute its instructions, keeping the container alive.
-func (d *Builder) constructHomeserver(blueprintName string, runner *instruction.Runner, hs b.Homeserver, networkName string) result {
-	contextStr := fmt.Sprintf("%s.%s.%s", d.Config.PackageNamespace, blueprintName, hs.Name)
+func (d *Builder) constructHomeserver(blueprintName string, runner *instruction.Runner, hs b.Homeserver, networkName string, namespace_counter string) result {
+	contextStr := fmt.Sprintf("%s.%s.%s.%s", d.Config.PackageNamespace, namespace_counter, blueprintName, hs.Name)
 	d.log("%s : constructing homeserver...\n", contextStr)
 	dep, err := d.deployBaseImage(blueprintName, hs, contextStr, networkName)
 	if err != nil {
