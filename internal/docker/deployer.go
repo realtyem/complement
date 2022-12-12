@@ -51,6 +51,7 @@ type Deployer struct {
 	Counter         int
 	debugLogging    bool
 	config          *config.Complement
+	generalLock     sync.Mutex
 }
 
 func NewDeployer(deployNamespace string, cfg *config.Complement) (*Deployer, error) {
@@ -73,16 +74,17 @@ func (d *Deployer) log(str string, args ...interface{}) {
 	log.Printf(str, args...)
 }
 
-func (d *Deployer) Deploy(ctx context.Context, blueprintName string, namespaceCounter string) (*Deployment, error) {
+func (d *Deployer) Deploy(ctx context.Context, blueprintName string, pkgNamespaceCounter string) (*Deployment, error) {
 	dep := &Deployment{
 		Deployer:      d,
-		BlueprintName: blueprintName + namespaceCounter,
+		BlueprintName: blueprintName,
 		HS:            make(map[string]*HomeserverDeployment),
 		Config:        d.config,
 	}
 	images, err := d.Docker.ImageList(ctx, types.ImageListOptions{
 		Filters: label(
 			"complement_pkg="+d.config.PackageNamespace,
+			// "complement_pkg_count="+pkgNamespaceCounter,
 			"complement_blueprint="+blueprintName,
 		),
 	})
@@ -102,13 +104,18 @@ func (d *Deployer) Deploy(ctx context.Context, blueprintName string, namespaceCo
 		mu.Lock()
 		d.Counter++
 		counter := d.Counter
-	    networkName, err := createNetworkIfNotExists(d.Docker, d.config.PackageNamespace, fmt.Sprintf("%s_%s", namespaceCounter, blueprintName))
+		log.Printf("inside deployImg: DeployNamespace: %s", d.DeployNamespace)
+	    networkName, err := createNetworkIfNotExists(d.Docker, d.config.PackageNamespace, d.DeployNamespace, blueprintName)
 	    if err != nil {
 		    return fmt.Errorf("Deploy: Failed to create network %w", err)
 	    }
 		mu.Unlock()
-		contextStr := img.Labels["complement_context"]
 		hsName := img.Labels["complement_hs_name"]
+		// contextStr := img.Labels["complement_context"]
+		contextStr := fmt.Sprintf("%s.%s.%s.%s", d.config.PackageNamespace, d.DeployNamespace, blueprintName, hsName)
+		log.Printf("deployImg: pkgNamespaceCounter: %s", pkgNamespaceCounter)
+		log.Printf("deployImg: contextStr: %s", contextStr)
+		log.Printf("deployImg: networkName: %s", networkName)
 		asIDToRegistrationMap := asIDToRegistrationFromLabels(img.Labels)
 
 		// TODO: Make CSAPI port configurable
@@ -212,6 +219,10 @@ func deployImage(
 	var extraHosts []string
 	var mounts []mount.Mount
 	var err error
+	var contextStrSplit []string
+
+    contextStrSplit = strings.Split(contextStr, ".")
+    log.Printf("contextStrSplit: %v", contextStrSplit)
 
 	if runtime.GOOS == "linux" {
 		// Ensure that the homeservers under test can contact the host, so they can
@@ -253,6 +264,7 @@ func deployImage(
 			complementLabel:        contextStr,
 			"complement_blueprint": blueprintName,
 			"complement_pkg":       pkgNamespace,
+			// "complement_pkg_count": contextStrSplit[1],
 			"complement_hs_name":   hsName,
 		},
 	}, &container.HostConfig{

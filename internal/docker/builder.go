@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"sync"
     "time"
 
 	"github.com/docker/docker/api/types"
@@ -42,6 +43,8 @@ const complementLabel = "complement_context"
 type Builder struct {
 	Config *config.Complement
 	Docker *client.Client
+	NetworkLock sync.Mutex
+	DockerLock sync.Mutex
 }
 
 func NewBuilder(cfg *config.Complement) (*Builder, error) {
@@ -169,7 +172,7 @@ func (d *Builder) removeContainers() error {
 	return nil
 }
 
-func (d *Builder) ConstructBlueprintIfNotExist(bprint b.Blueprint, namespace_counter string) error {
+func (d *Builder) ConstructBlueprintIfNotExist(bprint b.Blueprint, pkgNamespaceCounter string) error {
 	images, err := d.Docker.ImageList(context.Background(), types.ImageListOptions{
 		Filters: label(
 			"complement_blueprint="+bprint.Name,
@@ -180,7 +183,7 @@ func (d *Builder) ConstructBlueprintIfNotExist(bprint b.Blueprint, namespace_cou
 		return fmt.Errorf("ConstructBlueprintIfNotExist(%s): failed to ImageList: %w", bprint.Name, err)
 	}
 	if len(images) == 0 {
-		err = d.ConstructBlueprint(bprint, namespace_counter)
+		err = d.ConstructBlueprint(bprint, pkgNamespaceCounter)
 		if err != nil {
 			return fmt.Errorf("ConstructBlueprintIfNotExist(%s): failed to ConstructBlueprint: %w", bprint.Name, err)
 		}
@@ -188,8 +191,8 @@ func (d *Builder) ConstructBlueprintIfNotExist(bprint b.Blueprint, namespace_cou
 	return nil
 }
 
-func (d *Builder) ConstructBlueprint(bprint b.Blueprint, namespace_counter string) error {
-	errs := d.construct(bprint, namespace_counter)
+func (d *Builder) ConstructBlueprint(bprint b.Blueprint, pkgNamespaceCounter string) error {
+	errs := d.construct(bprint, pkgNamespaceCounter)
 	if len(errs) > 0 {
 		for _, err := range errs {
 			d.log("could not construct blueprint: %s", err)
@@ -236,10 +239,14 @@ func (d *Builder) ConstructBlueprint(bprint b.Blueprint, namespace_counter strin
 }
 
 // construct all Homeservers sequentially then commits them
-func (d *Builder) construct(bprint b.Blueprint, namespace_counter string) (errs []error) {
-	d.log("Constructing blueprint '%s' with counter %s", bprint.Name, namespace_counter)
-
-	networkName, err := createNetworkIfNotExists(d.Docker, d.Config.PackageNamespace, fmt.Sprintf("%s_%s", namespace_counter, bprint.Name))
+func (d *Builder) construct(bprint b.Blueprint, pkgNamespaceCounter string) (errs []error) {
+	d.log("Constructing blueprint '%s'", bprint.Name)
+	log.Printf("construct: d.Config.PackageNamespace: %s", d.Config.PackageNamespace)
+	log.Printf("construct: pkgNamespaceCounter: %s", pkgNamespaceCounter)
+	log.Printf("construct: bprint.Name: %s", bprint.Name)
+    d.NetworkLock.Lock()
+	networkName, err := createNetworkIfNotExists(d.Docker, d.Config.PackageNamespace, pkgNamespaceCounter, bprint.Name)
+	d.NetworkLock.Unlock()
 	if err != nil {
 		return []error{err}
 	}
@@ -247,7 +254,7 @@ func (d *Builder) construct(bprint b.Blueprint, namespace_counter string) (errs 
 	runner := instruction.NewRunner(bprint.Name, d.Config.BestEffort, d.Config.DebugLoggingEnabled)
 	results := make([]result, len(bprint.Homeservers))
 	for i, hs := range bprint.Homeservers {
-		res := d.constructHomeserver(bprint.Name, runner, hs, networkName, namespace_counter)
+		res := d.constructHomeserver(bprint.Name, runner, hs, pkgNamespaceCounter, networkName)
 		if res.err != nil {
 			errs = append(errs, res.err)
 			if res.containerID != "" {
@@ -290,6 +297,7 @@ func (d *Builder) construct(bprint b.Blueprint, namespace_counter string) (errs 
 		if res.err != nil {
 			continue
 		}
+		log.Printf("RESULTS: %v", res)
 		// collect and store access tokens as labels 'access_token_$userid: $token'
 		labels := make(map[string]string)
 		accessTokens := runner.AccessTokens(res.homeserver.Name)
@@ -360,8 +368,13 @@ func toChanges(labels map[string]string) []string {
 }
 
 // construct this homeserver and execute its instructions, keeping the container alive.
-func (d *Builder) constructHomeserver(blueprintName string, runner *instruction.Runner, hs b.Homeserver, networkName string, namespace_counter string) result {
-	contextStr := fmt.Sprintf("%s.%s.%s.%s", d.Config.PackageNamespace, namespace_counter, blueprintName, hs.Name)
+func (d *Builder) constructHomeserver(blueprintName string, runner *instruction.Runner, hs b.Homeserver, pkgNamespaceCounter string, networkName string) result {
+    var contextStr string
+    if pkgNamespaceCounter != "" {
+        contextStr = fmt.Sprintf("%s.%s.%s.%s", d.Config.PackageNamespace, pkgNamespaceCounter, blueprintName, hs.Name)
+    } else {
+        contextStr = fmt.Sprintf("%s.%s.%s", d.Config.PackageNamespace, blueprintName, hs.Name)
+    }
 	d.log("%s : constructing homeserver...\n", contextStr)
 	dep, err := d.deployBaseImage(blueprintName, hs, contextStr, networkName)
 	if err != nil {
@@ -429,11 +442,12 @@ func generateASRegistrationYaml(as b.ApplicationService) string {
 
 // createNetworkIfNotExists creates a docker network and returns its name.
 // Name is guaranteed not to be empty when err == nil
-func createNetworkIfNotExists(docker *client.Client, pkgNamespace, blueprintName string) (networkName string, err error) {
+func createNetworkIfNotExists(docker *client.Client, pkgNamespace string, pkgNamespaceCounter string, blueprintName string) (networkName string, err error) {
 	// check if a network already exists for this blueprint
 	nws, err := docker.NetworkList(context.Background(), types.NetworkListOptions{
 		Filters: label(
 			"complement_pkg="+pkgNamespace,
+			// "complement_pkg_count="+pkgNamespaceCounter,
 			"complement_blueprint="+blueprintName,
 		),
 	})
@@ -447,7 +461,11 @@ func createNetworkIfNotExists(docker *client.Client, pkgNamespace, blueprintName
 		}
 		return nws[0].Name, nil
 	}
-	networkName = "complement_" + pkgNamespace + "_" + blueprintName
+	if pkgNamespaceCounter != "" {
+        networkName = "complement_" + pkgNamespace + "_" + pkgNamespaceCounter + "_" + blueprintName
+	} else {
+        networkName = "complement_" + pkgNamespace + "_" + blueprintName
+	}
 	// make a user-defined network so we get DNS based on the container name
 	nw, err := docker.NetworkCreate(context.Background(), networkName, types.NetworkCreate{
 		Labels: map[string]string{

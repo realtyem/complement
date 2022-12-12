@@ -56,16 +56,16 @@ func Deploy(t *testing.T, blueprint b.Blueprint) *docker.Deployment {
 	if complementBuilder == nil {
 		t.Fatalf("complementBuilder not set, did you forget to call TestMain?")
 	}
-	namespace := fmt.Sprintf("%d", atomic.AddUint64(&namespaceCounter, 1))
-	if err := complementBuilder.ConstructBlueprintIfNotExist(blueprint, namespace); err != nil {
+	pkgNamespaceCounter := fmt.Sprintf("%d", atomic.AddUint64(&namespaceCounter, 1))
+	if err := complementBuilder.ConstructBlueprintIfNotExist(blueprint, pkgNamespaceCounter); err != nil {
 		t.Fatalf("Deploy: Failed to construct blueprint: %s", err)
 	}
-	d, err := docker.NewDeployer(namespace, complementBuilder.Config)
+	d, err := docker.NewDeployer(pkgNamespaceCounter, complementBuilder.Config)
 	if err != nil {
 		t.Fatalf("Deploy: NewDeployer returned error %s", err)
 	}
 	timeStartDeploy := time.Now()
-	dep, err := d.Deploy(context.Background(), blueprint.Name, namespace)
+	dep, err := d.Deploy(context.Background(), blueprint.Name, pkgNamespaceCounter)
 	if err != nil {
 		t.Fatalf("Deploy: Deploy returned error %s", err)
 	}
