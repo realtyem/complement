@@ -62,6 +62,8 @@ jobs:
       - name: "Fix up docker"
         shell: bash
         run: |
+          ls -la /etc/docker
+          cat /etc/docker/daemon.json
           sudo echo "{\"default-address-pools\":[{\"base\":\"172.17.0.0/16\",\"size\":24}]}" > /etc/docker/daemon.json
           systemctl restart docker
           docker info
