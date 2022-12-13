@@ -228,7 +228,7 @@ func (d *Builder) ConstructBlueprint(bprint b.Blueprint, pkgNamespaceCounter str
 	}
 	// do this after we have found images so we know that the containers have been detached so
 	// we can actually remove the networks.
-	d.removeNetworks()
+	// d.removeNetworks()
 	if !foundImages {
 		return fmt.Errorf("failed to find built images via ImageList: did they all build ok?")
 	}
@@ -490,6 +490,7 @@ func createNetworkIfNotExists(docker *client.Client, pkgNamespace string, pkgNam
 	if nw.ID == "" {
 		return "", fmt.Errorf("%s: unexpected empty ID while creating networkID", blueprintName)
 	}
+	log.Printf("CreateNetwork: %s %s", networkName, nw.ID)
 	return networkName, nil
 }
 

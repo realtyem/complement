@@ -116,6 +116,14 @@ func (d *Deployer) Deploy(ctx context.Context, blueprintName string, pkgNamespac
 		log.Printf("deployImg: contextStr: %s. networkName: %s, pkgNamespaceCounter: %s", contextStr, networkName, pkgNamespaceCounter)
 		asIDToRegistrationMap := asIDToRegistrationFromLabels(img.Labels)
 
+        // Check the network is still there
+        networks, err := d.Docker.NetworkList(context.Background(), types.NetworkListOptions{
+            Filters: label(
+                "complement_pkg_count="+pkgNamespaceCounter,
+                "complement_pkg="+d.config.PackageNamespace,
+            ),
+        })
+        log.Printf("Need %s\nFound networks: %v", contextStr, networks)
 		// TODO: Make CSAPI port configurable
 		deployment, err := deployImage(
 			d.Docker, img.ID, fmt.Sprintf("complement_%s_%s_%s_%d", d.config.PackageNamespace, d.DeployNamespace, contextStr, counter),
