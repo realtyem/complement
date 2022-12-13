@@ -177,6 +177,7 @@ func (d *Builder) ConstructBlueprintIfNotExist(bprint b.Blueprint, pkgNamespaceC
 		Filters: label(
 			"complement_blueprint="+bprint.Name,
 			"complement_pkg="+d.Config.PackageNamespace,
+			"complement_pkg_count="+pkgNamespaceCounter,
 		),
 	})
 	if err != nil {
@@ -212,6 +213,7 @@ func (d *Builder) ConstructBlueprint(bprint b.Blueprint, pkgNamespaceCounter str
 				complementLabel,
 				"complement_blueprint="+bprint.Name,
 				"complement_pkg="+d.Config.PackageNamespace,
+				"complement_pkg_count="+pkgNamespaceCounter,
 			),
 		})
 		if err != nil {
@@ -447,7 +449,7 @@ func createNetworkIfNotExists(docker *client.Client, pkgNamespace string, pkgNam
 	nws, err := docker.NetworkList(context.Background(), types.NetworkListOptions{
 		Filters: label(
 			"complement_pkg="+pkgNamespace,
-			// "complement_pkg_count="+pkgNamespaceCounter,
+			"complement_pkg_count="+pkgNamespaceCounter,
 			"complement_blueprint="+blueprintName,
 		),
 	})
@@ -461,6 +463,7 @@ func createNetworkIfNotExists(docker *client.Client, pkgNamespace string, pkgNam
 		}
 		return nws[0].Name, nil
 	}
+	log.Printf("createNetwork: pkgNamespaceCounter: %s", pkgNamespaceCounter)
 	if pkgNamespaceCounter != "" {
         networkName = "complement_" + pkgNamespace + "_" + pkgNamespaceCounter + "_" + blueprintName
 	} else {
@@ -471,6 +474,7 @@ func createNetworkIfNotExists(docker *client.Client, pkgNamespace string, pkgNam
 		Labels: map[string]string{
 			complementLabel:        blueprintName,
 			"complement_blueprint": blueprintName,
+			"complement_pkg_count": pkgNamespaceCounter,
 			"complement_pkg":       pkgNamespace,
 		},
 	})

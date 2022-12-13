@@ -84,7 +84,7 @@ func (d *Deployer) Deploy(ctx context.Context, blueprintName string, pkgNamespac
 	images, err := d.Docker.ImageList(ctx, types.ImageListOptions{
 		Filters: label(
 			"complement_pkg="+d.config.PackageNamespace,
-			// "complement_pkg_count="+pkgNamespaceCounter,
+			"complement_pkg_count="+pkgNamespaceCounter,
 			"complement_blueprint="+blueprintName,
 		),
 	})
@@ -104,7 +104,7 @@ func (d *Deployer) Deploy(ctx context.Context, blueprintName string, pkgNamespac
 		mu.Lock()
 		d.Counter++
 		counter := d.Counter
-		log.Printf("inside deployImg: DeployNamespace: %s", d.DeployNamespace)
+		log.Printf("deployImg: DeployNamespace: %s", d.DeployNamespace)
 	    networkName, err := createNetworkIfNotExists(d.Docker, d.config.PackageNamespace, d.DeployNamespace, blueprintName)
 	    if err != nil {
 		    return fmt.Errorf("Deploy: Failed to create network %w", err)
@@ -113,9 +113,7 @@ func (d *Deployer) Deploy(ctx context.Context, blueprintName string, pkgNamespac
 		hsName := img.Labels["complement_hs_name"]
 		// contextStr := img.Labels["complement_context"]
 		contextStr := fmt.Sprintf("%s.%s.%s.%s", d.config.PackageNamespace, d.DeployNamespace, blueprintName, hsName)
-		log.Printf("deployImg: pkgNamespaceCounter: %s", pkgNamespaceCounter)
-		log.Printf("deployImg: contextStr: %s", contextStr)
-		log.Printf("deployImg: networkName: %s", networkName)
+		log.Printf("deployImg: contextStr: %s. networkName: %s, pkgNamespaceCounter: %s", contextStr, networkName, pkgNamespaceCounter)
 		asIDToRegistrationMap := asIDToRegistrationFromLabels(img.Labels)
 
 		// TODO: Make CSAPI port configurable
@@ -264,7 +262,7 @@ func deployImage(
 			complementLabel:        contextStr,
 			"complement_blueprint": blueprintName,
 			"complement_pkg":       pkgNamespace,
-			// "complement_pkg_count": contextStrSplit[1],
+			"complement_pkg_count": contextStrSplit[1],
 			"complement_hs_name":   hsName,
 		},
 	}, &container.HostConfig{
@@ -420,6 +418,7 @@ func waitForPorts(ctx context.Context, docker *client.Client, containerID string
 		if err == nil {
 			break
 		}
+		time.Sleep(50 * time.Millisecond)
 	}
 	return baseURL, fedBaseURL, nil
 }
