@@ -57,6 +57,15 @@ jobs:
           echo "$GOROOT_1_17_X64/bin" >> $GITHUB_PATH
           echo "~/go/bin" >> $GITHUB_PATH
 
+      # Fix up the address pool used with docker, as they don't provide enough networks with the defaults. Also restart
+      # the service so it will load.
+      - name: "Fix up docker"
+        shell: bash
+        run: |
+          echo '{"default-address-pools":[{"base":"172.17.0.0/16","size":24}]}' > /etc/docker/daemon.json
+          systemctl restart docker
+          docker info
+
       # Similar steps as dockerfiles/ComplementCIBuildkite.Dockerfile but on the host. We need
       # to do this so we can _be_ the host when running Complement so we can snaffle all the ports. If
       # we run Complement _in_ Docker then we can't -p all high numbered ports which then breaks federation
