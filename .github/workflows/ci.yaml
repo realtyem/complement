@@ -65,7 +65,7 @@ jobs:
           ls -la /etc/docker
           cat /etc/docker/daemon.json
           sudo bash -c 'echo "{\"default-address-pools\":[{\"base\":\"172.17.0.0/16\",\"size\":24}],\"exec-opts\":[\"native.cgroupdriver=cgroupfs\"],\"cgroup-parent\":\"/actions_job\"}" > /etc/docker/daemon.json'
-          systemctl restart docker
+          sudo systemctl restart docker
           docker info
 
       # Similar steps as dockerfiles/ComplementCIBuildkite.Dockerfile but on the host. We need
