@@ -59,7 +59,6 @@ func Deploy(t *testing.T, blueprint b.Blueprint) *docker.Deployment {
 	if complementBuilder == nil {
 		t.Fatalf("complementBuilder not set, did you forget to call TestMain?")
 	}
-    log.Printf("Processing blueprint: %s", blueprint.Name)
     _, err, _ := g.Do(blueprint.Name, func() (interface{}, error) {
         err := complementBuilder.ConstructBlueprintIfNotExist(blueprint)
         return nil, err

@@ -18,8 +18,7 @@ import (
 	"fmt"
 	"log"
 	"strings"
-	"sync"
-    "time"
+	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
@@ -43,8 +42,6 @@ const complementLabel = "complement_context"
 type Builder struct {
 	Config *config.Complement
 	Docker *client.Client
-	NetworkLock sync.Mutex
-	DockerLock sync.Mutex
 }
 
 func NewBuilder(cfg *config.Complement) (*Builder, error) {
@@ -237,6 +234,7 @@ func (d *Builder) ConstructBlueprint(bprint b.Blueprint) error {
 	for _, img := range images {
 		imgDatas = append(imgDatas, fmt.Sprintf("%s=>%v", img.ID, img.Labels))
 	}
+	d.log("Constructed blueprint '%s' : %v", bprint.Name, imgDatas)
 	return nil
 }
 
@@ -365,7 +363,7 @@ func toChanges(labels map[string]string) []string {
 
 // construct this homeserver and execute its instructions, keeping the container alive.
 func (d *Builder) constructHomeserver(blueprintName string, runner *instruction.Runner, hs b.Homeserver, networkName string) result {
-    contextStr := fmt.Sprintf("%s.%s.%s", d.Config.PackageNamespace, blueprintName, hs.Name)
+	contextStr := fmt.Sprintf("%s.%s.%s", d.Config.PackageNamespace, blueprintName, hs.Name)
 
 	d.log("%s : constructing homeserver...\n", contextStr)
 	dep, err := d.deployBaseImage(blueprintName, hs, contextStr, networkName)
@@ -382,7 +380,7 @@ func (d *Builder) constructHomeserver(blueprintName string, runner *instruction.
 			homeserver:  hs,
 		}
 	}
-	log.Printf("%s : deployed base image to %s (%s)\n", contextStr, dep.BaseURL, dep.ContainerID)
+	d.log("%s : deployed base image to %s (%s)\n", contextStr, dep.BaseURL, dep.ContainerID)
 	err = runner.Run(hs, dep.BaseURL)
 	if err != nil {
 		d.log("%s : failed to run instructions: %s\n", contextStr, err)

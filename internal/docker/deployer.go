@@ -51,7 +51,6 @@ type Deployer struct {
 	Counter         int
 	debugLogging    bool
 	config          *config.Complement
-	generalLock     sync.Mutex
 }
 
 func NewDeployer(deployNamespace string, cfg *config.Complement) (*Deployer, error) {
@@ -94,6 +93,10 @@ func (d *Deployer) Deploy(ctx context.Context, blueprintName string, pkgNamespac
 	if len(images) == 0 {
 		return nil, fmt.Errorf("Deploy: No images have been built for blueprint %s", blueprintName)
 	}
+	networkName, err := createNetworkIfNotExists(d.Docker, d.config.PackageNamespace, d.DeployNamespace, blueprintName)
+	if err != nil {
+		return fmt.Errorf("Deploy: Failed to create network %w", err)
+	}
 
 	// deploy images in parallel
 	var mu sync.Mutex // protects mutable values like the counter and errors
@@ -104,10 +107,6 @@ func (d *Deployer) Deploy(ctx context.Context, blueprintName string, pkgNamespac
 		mu.Lock()
 		d.Counter++
 		// counter := d.Counter
-	    networkName, err := createNetworkIfNotExists(d.Docker, d.config.PackageNamespace, d.DeployNamespace, blueprintName)
-	    if err != nil {
-		    return fmt.Errorf("Deploy: Failed to create network %w", err)
-	    }
 		mu.Unlock()
 		hsName := img.Labels["complement_hs_name"]
 		// contextStr := img.Labels["complement_context"]
@@ -421,7 +420,7 @@ func waitForPorts(ctx context.Context, docker *client.Client, containerID string
 		if err == nil {
 			break
 		}
-		time.Sleep(50 * time.Millisecond)
+		time.Sleep(500 * time.Millisecond)
 	}
 	return baseURL, fedBaseURL, nil
 }
