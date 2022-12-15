@@ -172,19 +172,19 @@ func (d *Builder) removeContainers() error {
 	return nil
 }
 
-func (d *Builder) ConstructBlueprintIfNotExist(bprint b.Blueprint, pkgNamespaceCounter string) error {
+func (d *Builder) ConstructBlueprintIfNotExist(bprint b.Blueprint) error {
 	images, err := d.Docker.ImageList(context.Background(), types.ImageListOptions{
 		Filters: label(
 			"complement_blueprint="+bprint.Name,
 			"complement_pkg="+d.Config.PackageNamespace,
-			"complement_pkg_count="+pkgNamespaceCounter,
+			"complement_pkg_count=bluePrint",
 		),
 	})
 	if err != nil {
 		return fmt.Errorf("ConstructBlueprintIfNotExist(%s): failed to ImageList: %w", bprint.Name, err)
 	}
 	if len(images) == 0 {
-		err = d.ConstructBlueprint(bprint, pkgNamespaceCounter)
+		err = d.ConstructBlueprint(bprint)
 		if err != nil {
 			return fmt.Errorf("ConstructBlueprintIfNotExist(%s): failed to ConstructBlueprint: %w", bprint.Name, err)
 		}
@@ -192,8 +192,8 @@ func (d *Builder) ConstructBlueprintIfNotExist(bprint b.Blueprint, pkgNamespaceC
 	return nil
 }
 
-func (d *Builder) ConstructBlueprint(bprint b.Blueprint, pkgNamespaceCounter string) error {
-	errs := d.construct(bprint, pkgNamespaceCounter)
+func (d *Builder) ConstructBlueprint(bprint b.Blueprint) error {
+	errs := d.construct(bprint)
 	if len(errs) > 0 {
 		for _, err := range errs {
 			d.log("could not construct blueprint: %s", err)
@@ -205,7 +205,8 @@ func (d *Builder) ConstructBlueprint(bprint b.Blueprint, pkgNamespaceCounter str
 	foundImages := false
 	var images []types.ImageSummary
 	var err error
-	waitTime := 20 * time.Second
+	// This is effectively the timeout for checking if a blueprint was constructed, it will need to be a little longer
+	waitTime := 30 * time.Second
 	startTime := time.Now()
 	for time.Since(startTime) < waitTime {
 		images, err = d.Docker.ImageList(context.Background(), types.ImageListOptions{
@@ -213,14 +214,14 @@ func (d *Builder) ConstructBlueprint(bprint b.Blueprint, pkgNamespaceCounter str
 				complementLabel,
 				"complement_blueprint="+bprint.Name,
 				"complement_pkg="+d.Config.PackageNamespace,
-				"complement_pkg_count="+pkgNamespaceCounter,
+				"complement_pkg_count=bluePrint",
 			),
 		})
 		if err != nil {
 			return err
 		}
 		if len(images) < len(bprint.Homeservers) {
-			time.Sleep(100 * time.Millisecond)
+			time.Sleep(1000 * time.Millisecond)
 		} else {
 			foundImages = true
 			break
@@ -236,19 +237,13 @@ func (d *Builder) ConstructBlueprint(bprint b.Blueprint, pkgNamespaceCounter str
 	for _, img := range images {
 		imgDatas = append(imgDatas, fmt.Sprintf("%s=>%v", img.ID, img.Labels))
 	}
-	d.log("Constructed blueprint '%s' : %v", bprint.Name, imgDatas)
 	return nil
 }
 
 // construct all Homeservers sequentially then commits them
-func (d *Builder) construct(bprint b.Blueprint, pkgNamespaceCounter string) (errs []error) {
+func (d *Builder) construct(bprint b.Blueprint) (errs []error) {
 	d.log("Constructing blueprint '%s'", bprint.Name)
-	log.Printf("construct: d.Config.PackageNamespace: %s", d.Config.PackageNamespace)
-	log.Printf("construct: pkgNamespaceCounter: %s", pkgNamespaceCounter)
-	log.Printf("construct: bprint.Name: %s", bprint.Name)
-    d.NetworkLock.Lock()
-	networkName, err := createNetworkIfNotExists(d.Docker, d.Config.PackageNamespace, pkgNamespaceCounter, bprint.Name)
-	d.NetworkLock.Unlock()
+	networkName, err := createNetworkIfNotExists(d.Docker, d.Config.PackageNamespace, "", bprint.Name)
 	if err != nil {
 		return []error{err}
 	}
@@ -256,7 +251,7 @@ func (d *Builder) construct(bprint b.Blueprint, pkgNamespaceCounter string) (err
 	runner := instruction.NewRunner(bprint.Name, d.Config.BestEffort, d.Config.DebugLoggingEnabled)
 	results := make([]result, len(bprint.Homeservers))
 	for i, hs := range bprint.Homeservers {
-		res := d.constructHomeserver(bprint.Name, runner, hs, pkgNamespaceCounter, networkName)
+		res := d.constructHomeserver(bprint.Name, runner, hs, networkName)
 		if res.err != nil {
 			errs = append(errs, res.err)
 			if res.containerID != "" {
@@ -299,7 +294,6 @@ func (d *Builder) construct(bprint b.Blueprint, pkgNamespaceCounter string) (err
 		if res.err != nil {
 			continue
 		}
-		log.Printf("RESULTS: %v", res)
 		// collect and store access tokens as labels 'access_token_$userid: $token'
 		labels := make(map[string]string)
 		accessTokens := runner.AccessTokens(res.homeserver.Name)
@@ -334,7 +328,7 @@ func (d *Builder) construct(bprint b.Blueprint, pkgNamespaceCounter string) (err
 		// If we don't do this, then e.g. Postgres databases can become corrupt, which
 		// then incurs a slow recovery process when we use the blueprint later.
 		d.log("%s: Stopping container: %s", res.contextStr, res.containerID)
-		timeout := 10 * time.Second
+		timeout := 30 * time.Second
 		d.Docker.ContainerStop(context.Background(), res.containerID, &timeout)
 
 		// Log again so we can see the timings.
@@ -370,13 +364,9 @@ func toChanges(labels map[string]string) []string {
 }
 
 // construct this homeserver and execute its instructions, keeping the container alive.
-func (d *Builder) constructHomeserver(blueprintName string, runner *instruction.Runner, hs b.Homeserver, pkgNamespaceCounter string, networkName string) result {
-    var contextStr string
-    if pkgNamespaceCounter != "" {
-        contextStr = fmt.Sprintf("%s.%s.%s.%s", d.Config.PackageNamespace, pkgNamespaceCounter, blueprintName, hs.Name)
-    } else {
-        contextStr = fmt.Sprintf("%s.%s.%s", d.Config.PackageNamespace, blueprintName, hs.Name)
-    }
+func (d *Builder) constructHomeserver(blueprintName string, runner *instruction.Runner, hs b.Homeserver, networkName string) result {
+    contextStr := fmt.Sprintf("%s.%s.%s", d.Config.PackageNamespace, blueprintName, hs.Name)
+
 	d.log("%s : constructing homeserver...\n", contextStr)
 	dep, err := d.deployBaseImage(blueprintName, hs, contextStr, networkName)
 	if err != nil {
@@ -392,7 +382,7 @@ func (d *Builder) constructHomeserver(blueprintName string, runner *instruction.
 			homeserver:  hs,
 		}
 	}
-	d.log("%s : deployed base image to %s (%s)\n", contextStr, dep.BaseURL, dep.ContainerID)
+	log.Printf("%s : deployed base image to %s (%s)\n", contextStr, dep.BaseURL, dep.ContainerID)
 	err = runner.Run(hs, dep.BaseURL)
 	if err != nil {
 		d.log("%s : failed to run instructions: %s\n", contextStr, err)
@@ -445,14 +435,30 @@ func generateASRegistrationYaml(as b.ApplicationService) string {
 // createNetworkIfNotExists creates a docker network and returns its name.
 // Name is guaranteed not to be empty when err == nil
 func createNetworkIfNotExists(docker *client.Client, pkgNamespace string, pkgNamespaceCounter string, blueprintName string) (networkName string, err error) {
-	// check if a network already exists for this blueprint
-	nws, err := docker.NetworkList(context.Background(), types.NetworkListOptions{
-		Filters: label(
-			"complement_pkg="+pkgNamespace,
-			"complement_pkg_count="+pkgNamespaceCounter,
-			"complement_blueprint="+blueprintName,
-		),
-	})
+	// var err error
+	var nws []types.NetworkResource
+	var nw types.NetworkCreateResponse
+	if pkgNamespaceCounter != "" {
+		networkName = "complement_" + pkgNamespace + "_" + pkgNamespaceCounter + "_" + blueprintName
+		// check if a network already exists for this blueprint
+		nws, err = docker.NetworkList(context.Background(), types.NetworkListOptions{
+			Filters: label(
+				"complement_pkg="+pkgNamespace,
+				"complement_pkg_count="+pkgNamespaceCounter,
+				"complement_blueprint="+blueprintName,
+			),
+		})
+	} else {
+		networkName = "complement_" + pkgNamespace + "_" + blueprintName
+		// check if a network already exists for this blueprint
+		nws, err = docker.NetworkList(context.Background(), types.NetworkListOptions{
+				Filters: label(
+				"complement_pkg="+pkgNamespace,
+				"complement_pkg_count=bluePrint",
+				"complement_blueprint="+blueprintName,
+			),
+		})
+	}
 	if err != nil {
 		return "", fmt.Errorf("%s: failed to list networks. %w", blueprintName, err)
 	}
@@ -463,21 +469,28 @@ func createNetworkIfNotExists(docker *client.Client, pkgNamespace string, pkgNam
 		}
 		return nws[0].Name, nil
 	}
-	log.Printf("createNetwork: pkgNamespaceCounter: %s", pkgNamespaceCounter)
-	if pkgNamespaceCounter != "" {
-        networkName = "complement_" + pkgNamespace + "_" + pkgNamespaceCounter + "_" + blueprintName
-	} else {
-        networkName = "complement_" + pkgNamespace + "_" + blueprintName
-	}
-	// make a user-defined network so we get DNS based on the container name
-	nw, err := docker.NetworkCreate(context.Background(), networkName, types.NetworkCreate{
-		Labels: map[string]string{
-			complementLabel:        blueprintName,
-			"complement_blueprint": blueprintName,
-			"complement_pkg_count": pkgNamespaceCounter,
-			"complement_pkg":       pkgNamespace,
-		},
-	})
+    if pkgNamespaceCounter != "" {
+        // make a user-defined network so we get DNS based on the container name
+        nw, err = docker.NetworkCreate(context.Background(), networkName, types.NetworkCreate{
+            Labels: map[string]string{
+                complementLabel:        blueprintName,
+                "complement_blueprint": blueprintName,
+                "complement_pkg_count": pkgNamespaceCounter,
+                "complement_pkg":       pkgNamespace,
+            },
+        })
+    } else {
+        // make a user-defined network so we get DNS based on the container name
+        nw, err = docker.NetworkCreate(context.Background(), networkName, types.NetworkCreate{
+            Labels: map[string]string{
+                complementLabel:        blueprintName,
+                "complement_blueprint": blueprintName,
+                "complement_pkg_count": "bluePrint",
+                "complement_pkg":       pkgNamespace,
+            },
+        })
+
+    }
 	if err != nil {
 		return "", fmt.Errorf("%s: failed to create docker network. %w", blueprintName, err)
 	}
@@ -490,7 +503,6 @@ func createNetworkIfNotExists(docker *client.Client, pkgNamespace string, pkgNam
 	if nw.ID == "" {
 		return "", fmt.Errorf("%s: unexpected empty ID while creating networkID", blueprintName)
 	}
-	log.Printf("CreateNetwork: %s %s", networkName, nw.ID)
 	return networkName, nil
 }
 

@@ -15,13 +15,16 @@ import (
 	"github.com/matrix-org/complement/internal/b"
 	"github.com/matrix-org/complement/internal/config"
 	"github.com/matrix-org/complement/internal/docker"
+
+	"golang.org/x/sync/singleflight"
 )
 
 var namespaceCounter uint64
 
 // persist the complement builder which is set when the tests start via TestMain
 var complementBuilder *docker.Builder
-
+//
+var g singleflight.Group
 // TestMain is the main entry point for Complement.
 //
 // It will clean up any old containers/images/networks from the previous run, then run the tests, then clean up
@@ -56,10 +59,15 @@ func Deploy(t *testing.T, blueprint b.Blueprint) *docker.Deployment {
 	if complementBuilder == nil {
 		t.Fatalf("complementBuilder not set, did you forget to call TestMain?")
 	}
+    log.Printf("Processing blueprint: %s", blueprint.Name)
+    _, err, _ := g.Do(blueprint.Name, func() (interface{}, error) {
+        err := complementBuilder.ConstructBlueprintIfNotExist(blueprint)
+        return nil, err
+    })
+    if err != nil {
+        t.Fatalf("Deploy: Failed to construct blueprint: %s", err)
+    }
 	pkgNamespaceCounter := fmt.Sprintf("%d", atomic.AddUint64(&namespaceCounter, 1))
-	if err := complementBuilder.ConstructBlueprintIfNotExist(blueprint, pkgNamespaceCounter); err != nil {
-		t.Fatalf("Deploy: Failed to construct blueprint: %s", err)
-	}
 	d, err := docker.NewDeployer(pkgNamespaceCounter, complementBuilder.Config)
 	if err != nil {
 		t.Fatalf("Deploy: NewDeployer returned error %s", err)

@@ -40,14 +40,14 @@ func (r *Runtime) CreateDeployment(imageURI string, blueprint *b.Blueprint) (*do
 	if err != nil {
 		return nil, expires, err
 	}
-	if err = builder.ConstructBlueprintIfNotExist(*blueprint, ""); err != nil {
+	if err = builder.ConstructBlueprintIfNotExist(*blueprint); err != nil {
 		return nil, expires, fmt.Errorf("CreateDeployment: Failed to construct blueprint: %s", err)
 	}
 	d, err := docker.NewDeployer(namespace, cfg)
 	if err != nil {
 		return nil, expires, fmt.Errorf("CreateDeployment: NewDeployer returned error %s", err)
 	}
-	dep, err := d.Deploy(context.Background(), blueprint.Name, "")
+	dep, err := d.Deploy(context.Background(), blueprint.Name, namespace)
 	if err != nil {
 		return nil, expires, fmt.Errorf("CreateDeployment: Deploy returned error %s", err)
 	}
