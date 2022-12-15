@@ -95,7 +95,7 @@ func (d *Deployer) Deploy(ctx context.Context, blueprintName string, pkgNamespac
 	}
 	networkName, err := createNetworkIfNotExists(d.Docker, d.config.PackageNamespace, d.DeployNamespace, blueprintName)
 	if err != nil {
-		return fmt.Errorf("Deploy: Failed to create network %w", err)
+		return nil, fmt.Errorf("Deploy: Failed to create network %w", err)
 	}
 
 	// deploy images in parallel
