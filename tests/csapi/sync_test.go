@@ -16,7 +16,7 @@ import (
 
 // Observes "first bug" from https://github.com/matrix-org/dendrite/pull/1394#issuecomment-687056673
 func TestCumulativeJoinLeaveJoinSync(t *testing.T) {
-    t.Parallel()
+	t.Parallel()
 
 	deployment := Deploy(t, b.BlueprintOneToOneRoom)
 	defer deployment.Destroy(t)
@@ -56,9 +56,9 @@ func TestCumulativeJoinLeaveJoinSync(t *testing.T) {
 
 // Observes "second bug" from https://github.com/matrix-org/dendrite/pull/1394#issuecomment-687056673
 func TestTentativeEventualJoiningAfterRejecting(t *testing.T) {
-    t.Parallel()
+	t.Parallel()
 
-    deployment := Deploy(t, b.BlueprintOneToOneRoom)
+	deployment := Deploy(t, b.BlueprintOneToOneRoom)
 	defer deployment.Destroy(t)
 
 	alice := deployment.Client(t, "hs1", "@alice:hs1")
@@ -107,9 +107,9 @@ func TestTentativeEventualJoiningAfterRejecting(t *testing.T) {
 
 func TestSync(t *testing.T) {
 	runtime.SkipIf(t, runtime.Dendrite) // FIXME: https://github.com/matrix-org/dendrite/issues/1324
-    t.Parallel()
+	t.Parallel()
 
-    // sytest: Can sync
+	// sytest: Can sync
 	deployment := Deploy(t, b.BlueprintOneToOneRoom)
 	defer deployment.Destroy(t)
 	alice := deployment.Client(t, "hs1", "@alice:hs1")
@@ -212,7 +212,7 @@ func TestSync(t *testing.T) {
 		// sytest: Newly joined room includes presence in incremental sync
 		t.Run("Newly joined room includes presence in incremental sync", func(t *testing.T) {
 			runtime.SkipIf(t, runtime.Dendrite) // FIXME: https://github.com/matrix-org/dendrite/issues/1324
-            t.Parallel()
+			t.Parallel()
 
 			roomID := alice.CreateRoom(t, map[string]interface{}{"preset": "public_chat"})
 			alice.MustSyncUntil(t, client.SyncReq{}, client.SyncJoinedTo(alice.UserID, roomID))
@@ -234,7 +234,7 @@ func TestSync(t *testing.T) {
 		// sytest: Get presence for newly joined members in incremental sync
 		t.Run("Get presence for newly joined members in incremental sync", func(t *testing.T) {
 			runtime.SkipIf(t, runtime.Dendrite) // FIXME: https://github.com/matrix-org/dendrite/issues/1324
-            t.Parallel()
+			t.Parallel()
 
 			roomID := alice.CreateRoom(t, map[string]interface{}{"preset": "public_chat"})
 			nextBatch := alice.MustSyncUntil(t, client.SyncReq{}, client.SyncJoinedTo(alice.UserID, roomID))
@@ -388,7 +388,7 @@ func TestSync(t *testing.T) {
 
 // Test presence from people in 2 different rooms in incremental sync
 func TestPresenceSyncDifferentRooms(t *testing.T) {
-    t.Parallel()
+	t.Parallel()
 
 	deployment := Deploy(t, b.BlueprintOneToOneRoom)
 	defer deployment.Destroy(t)
@@ -451,7 +451,7 @@ func TestPresenceSyncDifferentRooms(t *testing.T) {
 
 func TestRoomSummary(t *testing.T) {
 	runtime.SkipIf(t, runtime.Synapse) // Currently more of a Dendrite test, so skip on Synapse
-    t.Parallel()
+	t.Parallel()
 
 	deployment := Deploy(t, b.BlueprintOneToOneRoom)
 	defer deployment.Destroy(t)

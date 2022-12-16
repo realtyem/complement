@@ -9,7 +9,7 @@ import (
 )
 
 func TestMembersLocal(t *testing.T) {
-    t.Parallel()
+	t.Parallel()
 
 	deployment := Deploy(t, b.BlueprintOneToOneRoom)
 	defer deployment.Destroy(t)

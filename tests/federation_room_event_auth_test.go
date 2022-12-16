@@ -70,7 +70,7 @@ func TestInboundFederationRejectsEventsWithRejectedAuthEvents(t *testing.T) {
 	 * /rooms/{roomID}/event. If it is rejected, we should get a 404.
 	 */
 
-    t.Parallel()
+	t.Parallel()
 
 	deployment := Deploy(t, b.BlueprintAlice)
 	defer deployment.Destroy(t)

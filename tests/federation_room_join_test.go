@@ -35,7 +35,7 @@ import (
 // m.room.create event would pick that up. We also can't tear down the Complement
 // server because otherwise signing key lookups will fail.
 func TestJoinViaRoomIDAndServerName(t *testing.T) {
-    t.Parallel()
+	t.Parallel()
 
 	deployment := Deploy(t, b.BlueprintFederationOneToOneRoom)
 	defer deployment.Destroy(t)
@@ -103,7 +103,7 @@ func TestJoinViaRoomIDAndServerName(t *testing.T) {
 // the properties listed above, then asking HS1 to join them and make sure that
 // they 200 OK.
 func TestJoinFederatedRoomWithUnverifiableEvents(t *testing.T) {
-    t.Parallel()
+	t.Parallel()
 
 	deployment := Deploy(t, b.BlueprintAlice)
 	defer deployment.Destroy(t)
@@ -263,7 +263,7 @@ func TestJoinFederatedRoomWithUnverifiableEvents(t *testing.T) {
 
 // This test checks that users cannot circumvent the auth checks via send_join.
 func TestBannedUserCannotSendJoin(t *testing.T) {
-    t.Parallel()
+	t.Parallel()
 
 	deployment := Deploy(t, b.BlueprintAlice)
 	defer deployment.Destroy(t)
@@ -334,25 +334,25 @@ func TestBannedUserCannotSendJoin(t *testing.T) {
 
 // This test checks that we cannot submit anything via /v1/send_join except a join.
 func TestCannotSendNonJoinViaSendJoinV1(t *testing.T) {
-    t.Parallel()
+	t.Parallel()
 	testValidationForSendMembershipEndpoint(t, "/_matrix/federation/v1/send_join", "join", nil)
 }
 
 // This test checks that we cannot submit anything via /v2/send_join except a join.
 func TestCannotSendNonJoinViaSendJoinV2(t *testing.T) {
-    t.Parallel()
+	t.Parallel()
 	testValidationForSendMembershipEndpoint(t, "/_matrix/federation/v2/send_join", "join", nil)
 }
 
 // This test checks that we cannot submit anything via /v1/send_leave except a leave.
 func TestCannotSendNonLeaveViaSendLeaveV1(t *testing.T) {
-    t.Parallel()
+	t.Parallel()
 	testValidationForSendMembershipEndpoint(t, "/_matrix/federation/v1/send_leave", "leave", nil)
 }
 
 // This test checks that we cannot submit anything via /v2/send_leave except a leave.
 func TestCannotSendNonLeaveViaSendLeaveV2(t *testing.T) {
-    t.Parallel()
+	t.Parallel()
 	testValidationForSendMembershipEndpoint(t, "/_matrix/federation/v2/send_leave", "leave", nil)
 }
 
@@ -467,7 +467,7 @@ func testValidationForSendMembershipEndpoint(t *testing.T, baseApiPath, expected
 //
 // Will be skipped if the server returns a full-state response.
 func TestSendJoinPartialStateResponse(t *testing.T) {
-    t.Parallel()
+	t.Parallel()
 
 	// start with a homeserver with two users
 	deployment := Deploy(t, b.BlueprintOneToOneRoom)
@@ -531,8 +531,8 @@ func TestSendJoinPartialStateResponse(t *testing.T) {
 	})
 
 	// check the returned auth events match those expected.
-    // Now that we include heroes in the partial join response,
-    // all of the events are included under "state" and so we don't expect any
+	// Now that we include heroes in the partial join response,
+	// all of the events are included under "state" and so we don't expect any
 	// extra auth_events.
 	// TODO: add in a second e.g. power_levels event so that we add stuff to the
 	// auth chain.
@@ -548,14 +548,14 @@ func TestSendJoinPartialStateResponse(t *testing.T) {
 
 // given an event JSON, return the type and state_key, joined with a "|"
 func typeAndStateKeyForEvent(result gjson.Result) string {
-   	return strings.Join([]string{result.Map()["type"].Str, result.Map()["state_key"].Str}, "|")
+	return strings.Join([]string{result.Map()["type"].Str, result.Map()["state_key"].Str}, "|")
 }
 
 func TestJoinFederatedRoomFromApplicationServiceBridgeUser(t *testing.T) {
 	// Dendrite doesn't read AS registration files from Complement yet
 	runtime.SkipIf(t, runtime.Dendrite) // FIXME: https://github.com/matrix-org/complement/issues/514
 
-    t.Parallel()
+	t.Parallel()
 
 	deployment := Deploy(t, b.BlueprintHSWithApplicationService)
 	defer deployment.Destroy(t)

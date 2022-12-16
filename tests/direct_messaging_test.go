@@ -19,7 +19,7 @@ import (
 // Test that a client can write `m.direct` account data and get told about updates to that event.
 // Requires a functioning account data implementation.
 func TestWriteMDirectAccountData(t *testing.T) {
-    t.Parallel()
+	t.Parallel()
 
 	deployment := Deploy(t, b.BlueprintOneToOneRoom)
 	defer func() {
@@ -77,7 +77,7 @@ func TestWriteMDirectAccountData(t *testing.T) {
 // Test that the `is_direct` flag on m.room.member invites propagate to the target user. Both users
 // are on the same homeserver.
 func TestIsDirectFlagLocal(t *testing.T) {
-    t.Parallel()
+	t.Parallel()
 
 	deployment := Deploy(t, b.BlueprintOneToOneRoom)
 	defer deployment.Destroy(t)
@@ -112,7 +112,7 @@ func TestIsDirectFlagLocal(t *testing.T) {
 // Test that the `is_direct` flag on m.room.member invites propagate to the target user. Users
 // are on different homeservers.
 func TestIsDirectFlagFederation(t *testing.T) {
-    t.Parallel()
+	t.Parallel()
 
 	deployment := Deploy(t, b.BlueprintAlice)
 	defer deployment.Destroy(t)

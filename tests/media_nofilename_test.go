@@ -13,7 +13,7 @@ import (
 
 // Can handle uploads and remote/local downloads without a file name
 func TestMediaWithoutFileName(t *testing.T) {
-    t.Parallel()
+	t.Parallel()
 
 	deployment := Deploy(t, b.BlueprintAlice)
 	defer deployment.Destroy(t)

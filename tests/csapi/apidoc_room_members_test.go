@@ -12,7 +12,7 @@ import (
 )
 
 func TestRoomMembers(t *testing.T) {
-    t.Parallel()
+	t.Parallel()
 	deployment := Deploy(t, b.BlueprintOneToOneRoom)
 	defer deployment.Destroy(t)
 	alice := deployment.Client(t, "hs1", "@alice:hs1")

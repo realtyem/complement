@@ -27,7 +27,7 @@ func TestRoomCreate(t *testing.T) {
 	bob := deployment.Client(t, "hs1", "@bob:hs1")
 
     // sytest: POST /createRoom makes a public room
-    t.Run("parallel", func(t *testing.T) {
+	t.Run("parallel", func(t *testing.T) {
         t.Run("POST /createRoom makes a public room", func(t *testing.T) {
             t.Parallel()
 

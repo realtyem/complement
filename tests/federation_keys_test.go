@@ -27,7 +27,7 @@ import (
 // https://matrix.org/docs/spec/server_server/latest#get-matrix-key-v2-server-keyid
 // sytest: Federation key API allows unsigned requests for keys
 func TestInboundFederationKeys(t *testing.T) {
-    t.Parallel()
+	t.Parallel()
 
 	deployment := Deploy(t, b.BlueprintAlice)
 	defer deployment.Destroy(t)

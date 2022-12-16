@@ -22,7 +22,7 @@ import (
 )
 
 func TestJumpToDateEndpoint(t *testing.T) {
-    t.Parallel()
+	t.Parallel()
 
 	deployment := Deploy(t, b.BlueprintHSWithApplicationService)
 	defer deployment.Destroy(t)

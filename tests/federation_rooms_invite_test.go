@@ -13,7 +13,7 @@ import (
 )
 
 func TestFederationRoomsInvite(t *testing.T) {
-    t.Parallel()
+	t.Parallel()
 
 	deployment := Deploy(t, b.BlueprintFederationOneToOneRoom)
 	defer deployment.Destroy(t)
@@ -25,6 +25,7 @@ func TestFederationRoomsInvite(t *testing.T) {
 		// sytest: Invited user can reject invite over federation
 		t.Run("Invited user can reject invite over federation", func(t *testing.T) {
 			t.Parallel()
+
 			roomID := alice.CreateRoom(t, map[string]interface{}{
 				"preset": "private_chat",
 				"invite": []string{bob.UserID},
@@ -37,6 +38,7 @@ func TestFederationRoomsInvite(t *testing.T) {
 		// sytest: Invited user can reject invite over federation several times
 		t.Run("Invited user can reject invite over federation several times", func(t *testing.T) {
 			t.Parallel()
+
 			roomID := alice.CreateRoom(t, map[string]interface{}{
 				"preset": "private_chat",
 			})
@@ -51,6 +53,7 @@ func TestFederationRoomsInvite(t *testing.T) {
 		// sytest: Invited user can reject invite over federation for empty room
 		t.Run("Invited user can reject invite over federation for empty room", func(t *testing.T) {
 			t.Parallel()
+
 			roomID := alice.CreateRoom(t, map[string]interface{}{
 				"preset": "private_chat",
 				"invite": []string{bob.UserID},
@@ -66,6 +69,7 @@ func TestFederationRoomsInvite(t *testing.T) {
 		// sytest: Remote invited user can see room metadata
 		t.Run("Remote invited user can see room metadata", func(t *testing.T) {
 			t.Parallel()
+
 			roomID := alice.CreateRoom(t, map[string]interface{}{
 				"preset": "private_chat",
 				"name":   "Invites room",
@@ -87,7 +91,7 @@ func TestFederationRoomsInvite(t *testing.T) {
 		})
 
 		t.Run("Invited user has 'is_direct' flag in prev_content after joining", func(t *testing.T) {
-		    t.Parallel()
+			t.Parallel()
 
 			roomID := alice.CreateRoom(t, map[string]interface{}{
 				"preset": "private_chat",

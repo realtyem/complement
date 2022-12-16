@@ -21,7 +21,7 @@ import (
 // Test that the server can make outbound federation profile requests
 // https://matrix.org/docs/spec/server_server/latest#get-matrix-federation-v1-query-profile
 func TestOutboundFederationProfile(t *testing.T) {
-    t.Parallel()
+	t.Parallel()
 
 	deployment := Deploy(t, b.BlueprintAlice)
 	defer deployment.Destroy(t)
@@ -71,7 +71,7 @@ func TestOutboundFederationProfile(t *testing.T) {
 }
 
 func TestInboundFederationProfile(t *testing.T) {
-    t.Parallel()
+	t.Parallel()
 
 	deployment := Deploy(t, b.BlueprintAlice)
 	defer deployment.Destroy(t)

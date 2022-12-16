@@ -190,7 +190,7 @@ func checkRestrictedRoom(t *testing.T, alice *client.CSAPI, bob *client.CSAPI, a
 
 // Test joining a room with join rules restricted to membership in another room.
 func TestRestrictedRoomsLocalJoin(t *testing.T) {
-    t.Parallel()
+	t.Parallel()
 
 	deployment := Deploy(t, b.BlueprintOneToOneRoom)
 	defer deployment.Destroy(t)
@@ -207,7 +207,7 @@ func TestRestrictedRoomsLocalJoin(t *testing.T) {
 
 // Test joining a room with join rules restricted to membership in another room.
 func TestRestrictedRoomsRemoteJoin(t *testing.T) {
-    t.Parallel()
+	t.Parallel()
 
 	deployment := Deploy(t, b.BlueprintFederationOneToOneRoom)
 	defer deployment.Destroy(t)
@@ -225,7 +225,7 @@ func TestRestrictedRoomsRemoteJoin(t *testing.T) {
 // A server will do a remote join for a local user if it is unable to to issue
 // joins in a restricted room it is already participating in.
 func TestRestrictedRoomsRemoteJoinLocalUser(t *testing.T) {
-    t.Parallel()
+	t.Parallel()
 
 	doTestRestrictedRoomsRemoteJoinLocalUser(t, "8", "restricted")
 }
@@ -354,7 +354,7 @@ func doTestRestrictedRoomsRemoteJoinLocalUser(t *testing.T, roomVersion string, 
 // * hs2 joins the room
 // * hs3 attempts to join via hs2 (should fail) and hs1 (should work)
 func TestRestrictedRoomsRemoteJoinFailOver(t *testing.T) {
-    t.Parallel()
+	t.Parallel()
 
 	doTestRestrictedRoomsRemoteJoinFailOver(t, "8", "restricted")
 }

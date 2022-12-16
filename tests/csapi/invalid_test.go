@@ -12,7 +12,7 @@ import (
 )
 
 func TestJson(t *testing.T) {
-    t.Parallel()
+	t.Parallel()
 
 	deployment := Deploy(t, b.BlueprintAlice)
 	defer deployment.Destroy(t)
@@ -171,7 +171,7 @@ func getFilters() []map[string]interface{} {
 // sytest: Check creating invalid filters returns 4xx
 func TestFilter(t *testing.T) {
 	runtime.SkipIf(t, runtime.Dendrite) // FIXME: https://github.com/matrix-org/dendrite/issues/2067
-    t.Parallel()
+	t.Parallel()
 
 	deployment := Deploy(t, b.BlueprintAlice)
 	defer deployment.Destroy(t)
@@ -190,7 +190,7 @@ func TestFilter(t *testing.T) {
 
 // sytest: Event size limits
 func TestEvent(t *testing.T) {
-    t.Parallel()
+	t.Parallel()
 
 	deployment := Deploy(t, b.BlueprintAlice)
 	defer deployment.Destroy(t)

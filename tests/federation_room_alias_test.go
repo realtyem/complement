@@ -11,7 +11,7 @@ import (
 
 // sytest: Remote room alias queries can handle Unicode
 func TestRemoteAliasRequestsUnderstandUnicode(t *testing.T) {
-    t.Parallel()
+	t.Parallel()
 
 	deployment := Deploy(t, b.BlueprintFederationOneToOneRoom)
 	defer deployment.Destroy(t)

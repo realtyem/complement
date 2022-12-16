@@ -18,7 +18,7 @@ import (
 
 // Tests that the server is capable of making outbound /send requests
 func TestOutboundFederationSend(t *testing.T) {
-    t.Parallel()
+	t.Parallel()
 
 	deployment := Deploy(t, b.BlueprintAlice)
 	defer deployment.Destroy(t)

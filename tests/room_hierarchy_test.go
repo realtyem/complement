@@ -78,7 +78,7 @@ func roomToChildrenMapper(r gjson.Result) interface{} {
 // - Events are returned correctly.
 // - Redacting links works correctly.
 func TestClientSpacesSummary(t *testing.T) {
-    t.Parallel()
+	t.Parallel()
 
 	deployment := Deploy(t, b.BlueprintOneToOneRoom)
 	defer deployment.Destroy(t)
@@ -387,7 +387,7 @@ func TestClientSpacesSummary(t *testing.T) {
 // Tests that:
 // - Rooms/spaces the user is not invited to should not appear.
 func TestClientSpacesSummaryJoinRules(t *testing.T) {
-    t.Parallel()
+	t.Parallel()
 
 	deployment := Deploy(t, b.BlueprintOneToOneRoom)
 	defer deployment.Destroy(t)
@@ -534,7 +534,7 @@ func TestClientSpacesSummaryJoinRules(t *testing.T) {
 // Tests that:
 // - Querying from root returns the entire graph
 func TestFederatedClientSpaces(t *testing.T) {
-    t.Parallel()
+	t.Parallel()
 
 	deployment := Deploy(t, b.BlueprintFederationOneToOneRoom)
 	defer deployment.Destroy(t)

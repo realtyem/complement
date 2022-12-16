@@ -38,7 +38,7 @@ func TestGetMissingEventsGapFilling(t *testing.T) {
 	// 4) Respond to /get_missing_events with the missing events if the request is well-formed.
 	// 5) Ensure the HS doesn't do /state_ids or /state
 	// 6) Ensure Alice sees all injected events in the correct order.
-    t.Parallel()
+	t.Parallel()
 
 	deployment := Deploy(t, b.BlueprintAlice)
 	defer deployment.Destroy(t)
@@ -164,7 +164,7 @@ func TestGetMissingEventsGapFilling(t *testing.T) {
 //
 // sytest: Outbound federation will ignore a missing event with bad JSON for room version 6
 func TestOutboundFederationIgnoresMissingEventWithBadJSONForRoomVersion6(t *testing.T) {
-    t.Parallel()
+	t.Parallel()
 
 	deployment := Deploy(t, b.BlueprintAlice)
 	defer deployment.Destroy(t)
@@ -319,7 +319,7 @@ func TestOutboundFederationIgnoresMissingEventWithBadJSONForRoomVersion6(t *test
 }
 
 func TestInboundCanReturnMissingEvents(t *testing.T) {
-    t.Parallel()
+	t.Parallel()
 
 	deployment := Deploy(t, b.BlueprintAlice)
 	defer deployment.Destroy(t)

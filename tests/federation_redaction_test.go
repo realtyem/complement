@@ -13,7 +13,7 @@ import (
 func TestFederationRedactSendsWithoutEvent(t *testing.T) {
 	runtime.SkipIf(t, runtime.Dendrite)
 
-    t.Parallel()
+	t.Parallel()
 
 	deployment := Deploy(t, b.BlueprintAlice)
 	defer deployment.Destroy(t)

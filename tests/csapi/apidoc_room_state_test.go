@@ -15,7 +15,7 @@ import (
 )
 
 func TestRoomState(t *testing.T) {
-    t.Parallel()
+	t.Parallel()
 	deployment := Deploy(t, b.BlueprintAlice)
 	defer deployment.Destroy(t)
 	authedClient := deployment.Client(t, "hs1", "@alice:hs1")

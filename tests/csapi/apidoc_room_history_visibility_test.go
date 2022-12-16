@@ -84,7 +84,7 @@ func TestFetchEvent(t *testing.T) {
 // history_visibility: joined
 // sytest: /event/ does not allow access to events before the user joined
 func TestFetchHistoricalJoinedEventDenied(t *testing.T) {
-    t.Parallel()
+	t.Parallel()
 
 	deployment := Deploy(t, b.BlueprintOneToOneRoom)
 	defer deployment.Destroy(t)
@@ -115,7 +115,7 @@ func TestFetchHistoricalJoinedEventDenied(t *testing.T) {
 // Tries to fetch an event before join, and succeeds.
 // history_visibility: shared
 func TestFetchHistoricalSharedEvent(t *testing.T) {
-    t.Parallel()
+	t.Parallel()
 
 	deployment := Deploy(t, b.BlueprintOneToOneRoom)
 	defer deployment.Destroy(t)
@@ -161,7 +161,7 @@ func TestFetchHistoricalSharedEvent(t *testing.T) {
 // Tries to fetch an event between being invited and joined, and succeeds.
 // history_visibility: invited
 func TestFetchHistoricalInvitedEventFromBetweenInvite(t *testing.T) {
-    t.Parallel()
+	t.Parallel()
 
 	deployment := Deploy(t, b.BlueprintOneToOneRoom)
 	defer deployment.Destroy(t)
@@ -210,7 +210,7 @@ func TestFetchHistoricalInvitedEventFromBetweenInvite(t *testing.T) {
 // Tries to fetch an event before being invited, and fails.
 // history_visibility: invited
 func TestFetchHistoricalInvitedEventFromBeforeInvite(t *testing.T) {
-    t.Parallel()
+	t.Parallel()
 
 	deployment := Deploy(t, b.BlueprintOneToOneRoom)
 	defer deployment.Destroy(t)
@@ -245,7 +245,7 @@ func TestFetchHistoricalInvitedEventFromBeforeInvite(t *testing.T) {
 // history_visibility: shared
 // sytest: /event/ on non world readable room does not work
 func TestFetchEventNonWorldReadable(t *testing.T) {
-    t.Parallel()
+	t.Parallel()
 
 	deployment := Deploy(t, b.BlueprintOneToOneRoom)
 	defer deployment.Destroy(t)
@@ -273,7 +273,7 @@ func TestFetchEventNonWorldReadable(t *testing.T) {
 // Tries to fetch an event without having joined, and succeeds.
 // history_visibility: world_readable
 func TestFetchEventWorldReadable(t *testing.T) {
-    t.Parallel()
+	t.Parallel()
 
 	deployment := Deploy(t, b.BlueprintOneToOneRoom)
 	defer deployment.Destroy(t)

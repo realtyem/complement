@@ -18,7 +18,7 @@ import (
 // Note: In contrast to Sytest, we define a filter.rooms on each search request, this is to mimic
 // creating a new user and new room per test. This also allows us to run in parallel.
 func TestSearch(t *testing.T) {
-    t.Parallel()
+	t.Parallel()
 	deployment := Deploy(t, b.BlueprintAlice)
 	defer deployment.Destroy(t)
 

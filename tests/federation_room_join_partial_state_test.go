@@ -35,7 +35,7 @@ import (
 )
 
 func TestPartialStateJoin(t *testing.T) {
-    t.Parallel()
+	t.Parallel()
 
 	// createTestServer spins up a federation server suitable for the tests in this file
 	createTestServer := func(t *testing.T, deployment *docker.Deployment, opts ...func(*federation.Server)) *federation.Server {

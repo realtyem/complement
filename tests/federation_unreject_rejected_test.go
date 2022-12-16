@@ -17,7 +17,7 @@ import (
 // event B is unrejected on the second pass and will appear in
 // the /sync response AFTER event A.
 func TestUnrejectRejectedEvents(t *testing.T) {
-    t.Parallel()
+	t.Parallel()
 
 	deployment := Deploy(t, b.BlueprintAlice)
 	defer deployment.Destroy(t)
