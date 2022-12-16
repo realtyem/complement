@@ -23,43 +23,49 @@ func TestJson(t *testing.T) {
 		},
 	})
 
-    // sytest: Invalid JSON integers
-    // sytest: Invalid JSON floats
-    t.Run("Invalid numerical values", func(t *testing.T) {
-        testCases := [][]byte{
-            []byte(`{"body": 9007199254740992}`),
-            []byte(`{"body": -9007199254740992}`),
-            []byte(`{"body": 1.1}`),
-        }
+	t.Run("Parallel", func(t *testing.T) {
+		// sytest: Invalid JSON integers
+		// sytest: Invalid JSON floats
+		t.Run("Invalid numerical values", func(t *testing.T) {
+			t.Parallel()
 
-        for _, testCase := range testCases {
-            res := alice.DoFunc(t, "POST", []string{"_matrix", "client", "v3", "rooms", roomID, "send", "complement.dummy"}, client.WithJSONBody(t, testCase))
+			testCases := [][]byte{
+				[]byte(`{"body": 9007199254740992}`),
+				[]byte(`{"body": -9007199254740992}`),
+				[]byte(`{"body": 1.1}`),
+			}
 
-            must.MatchResponse(t, res, match.HTTPResponse{
-                StatusCode: 400,
-                JSON: []match.JSON{
-                    match.JSONKeyEqual("errcode", "M_BAD_JSON"),
-                },
-            })
-        }
-    })
+			for _, testCase := range testCases {
+				res := alice.DoFunc(t, "POST", []string{"_matrix", "client", "v3", "rooms", roomID, "send", "complement.dummy"}, client.WithJSONBody(t, testCase))
 
-    // sytest: Invalid JSON special values
-    t.Run("Invalid JSON special values", func(t *testing.T) {
-        testCases := [][]byte{
-            []byte(`{"body": Infinity}`),
-            []byte(`{"body": -Infinity}`),
-            []byte(`{"body": NaN}`),
-        }
+				must.MatchResponse(t, res, match.HTTPResponse{
+					StatusCode: 400,
+					JSON: []match.JSON{
+						match.JSONKeyEqual("errcode", "M_BAD_JSON"),
+					},
+				})
+			}
+		})
 
-        for _, testCase := range testCases {
-            res := alice.DoFunc(t, "POST", []string{"_matrix", "client", "v3", "rooms", roomID, "send", "complement.dummy"}, client.WithJSONBody(t, testCase))
+		// sytest: Invalid JSON special values
+		t.Run("Invalid JSON special values", func(t *testing.T) {
+			t.Parallel()
 
-            must.MatchResponse(t, res, match.HTTPResponse{
-                StatusCode: 400,
-            })
-        }
-    })
+			testCases := [][]byte{
+				[]byte(`{"body": Infinity}`),
+				[]byte(`{"body": -Infinity}`),
+				[]byte(`{"body": NaN}`),
+			}
+
+			for _, testCase := range testCases {
+				res := alice.DoFunc(t, "POST", []string{"_matrix", "client", "v3", "rooms", roomID, "send", "complement.dummy"}, client.WithJSONBody(t, testCase))
+
+				must.MatchResponse(t, res, match.HTTPResponse{
+					StatusCode: 400,
+				})
+			}
+		})
+	})
 }
 
 // small helper function to not bloat the main one
@@ -165,7 +171,7 @@ func getFilters() []map[string]interface{} {
 // sytest: Check creating invalid filters returns 4xx
 func TestFilter(t *testing.T) {
 	runtime.SkipIf(t, runtime.Dendrite) // FIXME: https://github.com/matrix-org/dendrite/issues/2067
-	t.Parallel()
+    t.Parallel()
 
 	deployment := Deploy(t, b.BlueprintAlice)
 	defer deployment.Destroy(t)
@@ -195,28 +201,34 @@ func TestEvent(t *testing.T) {
 		},
 	})
 
-    t.Run("Large Event", func(t *testing.T) {
-        event := map[string]interface{}{
-            "msgtype": "m.text",
-            "body":    strings.Repeat("and they dont stop coming ", 2700), // 2700 * 26 == 70200
-        }
+	t.Run("Parallel", func(t *testing.T) {
+		t.Run("Large Event", func(t *testing.T) {
+			t.Parallel()
 
-        res := alice.DoFunc(t, "PUT", []string{"_matrix", "client", "v3", "rooms", roomID, "send", "m.room.message", "1"}, client.WithJSONBody(t, event))
+			event := map[string]interface{}{
+				"msgtype": "m.text",
+				"body":    strings.Repeat("and they dont stop coming ", 2700), // 2700 * 26 == 70200
+			}
 
-        must.MatchResponse(t, res, match.HTTPResponse{
-            StatusCode: 413,
-        })
-    })
+			res := alice.DoFunc(t, "PUT", []string{"_matrix", "client", "v3", "rooms", roomID, "send", "m.room.message", "1"}, client.WithJSONBody(t, event))
 
-    t.Run("Large State Event", func(t *testing.T) {
-        stateEvent := map[string]interface{}{
-            "body": strings.Repeat("Dormammu, I've Come To Bargain.\n", 2200), // 2200 * 32 == 70400
-        }
+			must.MatchResponse(t, res, match.HTTPResponse{
+				StatusCode: 413,
+			})
+		})
 
-        res := alice.DoFunc(t, "PUT", []string{"_matrix", "client", "v3", "rooms", roomID, "state", "marvel.universe.fate"}, client.WithJSONBody(t, stateEvent))
+		t.Run("Large State Event", func(t *testing.T) {
+			t.Parallel()
 
-        must.MatchResponse(t, res, match.HTTPResponse{
-            StatusCode: 413,
-        })
-    })
+			stateEvent := map[string]interface{}{
+				"body": strings.Repeat("Dormammu, I've Come To Bargain.\n", 2200), // 2200 * 32 == 70400
+			}
+
+			res := alice.DoFunc(t, "PUT", []string{"_matrix", "client", "v3", "rooms", roomID, "state", "marvel.universe.fate"}, client.WithJSONBody(t, stateEvent))
+
+			must.MatchResponse(t, res, match.HTTPResponse{
+				StatusCode: 413,
+			})
+		})
+	})
 }

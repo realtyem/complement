@@ -119,40 +119,44 @@ func TestE2EKeyBackupReplaceRoomKeyRules(t *testing.T) {
 		},
 	}
 
-    for i := range testCases {
-        tc := testCases[i]
-        t.Run(fmt.Sprintf("%+v", tc.input), func(t *testing.T) {
-            // insert the key that will be tested against
-            alice.MustDoFunc(t, "PUT", []string{"_matrix", "client", "v3", "room_keys", "keys", roomID, tc.sessionID},
-                client.WithQueries(map[string][]string{"version": {backupVersion}}), client.WithJSONBody(t, map[string]interface{}{
-                    "first_message_index": tc.input.firstMessageIndex,
-                    "forwarded_count":     tc.input.forwardedCount,
-                    "is_verified":         tc.input.isVerified,
-                    "session_data":        map[string]interface{}{"a": "b"},
-                }),
-            )
-            // now check that each key in keysThatDontReplace do not replace this key
-            for _, testKey := range tc.keysThatDontReplace {
-                alice.MustDoFunc(t, "PUT", []string{"_matrix", "client", "v3", "room_keys", "keys", roomID, tc.sessionID},
-                    client.WithQueries(map[string][]string{"version": {backupVersion}}), client.WithJSONBody(t, map[string]interface{}{
-                        "first_message_index": testKey.firstMessageIndex,
-                        "forwarded_count":     testKey.forwardedCount,
-                        "is_verified":         testKey.isVerified,
-                        "session_data":        map[string]interface{}{"a": "b"},
-                    }),
-                )
-                checkResp := alice.MustDoFunc(t, "GET", []string{"_matrix", "client", "v3", "room_keys", "keys", roomID, tc.sessionID},
-                    client.WithQueries(map[string][]string{"version": {backupVersion}}),
-                )
-                must.MatchResponse(t, checkResp, match.HTTPResponse{
-                    StatusCode: 200,
-                    JSON: []match.JSON{
-                        match.JSONKeyEqual("first_message_index", tc.input.firstMessageIndex),
-                        match.JSONKeyEqual("forwarded_count", tc.input.forwardedCount),
-                        match.JSONKeyEqual("is_verified", tc.input.isVerified),
-                    },
-                })
-            }
-        })
-    }
+	t.Run("parallel", func(t *testing.T) {
+		for i := range testCases {
+			tc := testCases[i]
+			t.Run(fmt.Sprintf("%+v", tc.input), func(t *testing.T) {
+				t.Parallel()
+
+				// insert the key that will be tested against
+				alice.MustDoFunc(t, "PUT", []string{"_matrix", "client", "v3", "room_keys", "keys", roomID, tc.sessionID},
+					client.WithQueries(map[string][]string{"version": {backupVersion}}), client.WithJSONBody(t, map[string]interface{}{
+						"first_message_index": tc.input.firstMessageIndex,
+						"forwarded_count":     tc.input.forwardedCount,
+						"is_verified":         tc.input.isVerified,
+						"session_data":        map[string]interface{}{"a": "b"},
+					}),
+				)
+				// now check that each key in keysThatDontReplace do not replace this key
+				for _, testKey := range tc.keysThatDontReplace {
+					alice.MustDoFunc(t, "PUT", []string{"_matrix", "client", "v3", "room_keys", "keys", roomID, tc.sessionID},
+						client.WithQueries(map[string][]string{"version": {backupVersion}}), client.WithJSONBody(t, map[string]interface{}{
+							"first_message_index": testKey.firstMessageIndex,
+							"forwarded_count":     testKey.forwardedCount,
+							"is_verified":         testKey.isVerified,
+							"session_data":        map[string]interface{}{"a": "b"},
+						}),
+					)
+					checkResp := alice.MustDoFunc(t, "GET", []string{"_matrix", "client", "v3", "room_keys", "keys", roomID, tc.sessionID},
+						client.WithQueries(map[string][]string{"version": {backupVersion}}),
+					)
+					must.MatchResponse(t, checkResp, match.HTTPResponse{
+						StatusCode: 200,
+						JSON: []match.JSON{
+							match.JSONKeyEqual("first_message_index", tc.input.firstMessageIndex),
+							match.JSONKeyEqual("forwarded_count", tc.input.forwardedCount),
+							match.JSONKeyEqual("is_verified", tc.input.isVerified),
+						},
+					})
+				}
+			})
+		}
+	})
 }
