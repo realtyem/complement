@@ -1,6 +1,7 @@
 package docker
 
 import (
+	"sync"
 	"testing"
 	"time"
 
@@ -18,6 +19,7 @@ type Deployment struct {
 	// A map of HS name to a HomeserverDeployment
 	HS     map[string]*HomeserverDeployment
 	Config *config.Complement
+	mutex sync.Mutex
 }
 
 // HomeserverDeployment represents a running homeserver in a container.
@@ -73,10 +75,12 @@ func (d *Deployment) Client(t *testing.T, hsName, userID string) *client.CSAPI {
 		DeviceID:         deviceID,
 		BaseURL:          dep.BaseURL,
 		Client:           client.NewLoggedClient(t, hsName, nil),
-		SyncUntilTimeout: 5 * time.Second,
+		SyncUntilTimeout: 20 * time.Second,
 		Debug:            d.Deployer.debugLogging,
 	}
+	d.mutex.Lock()
 	dep.CSAPIClients = append(dep.CSAPIClients, client)
+	d.mutex.Unlock()
 	return client
 }
 
@@ -101,7 +105,9 @@ func (d *Deployment) RegisterUser(t *testing.T, hsName, localpart, password stri
 		SyncUntilTimeout: 5 * time.Second,
 		Debug:            d.Deployer.debugLogging,
 	}
+	d.mutex.Lock()
 	dep.CSAPIClients = append(dep.CSAPIClients, client)
+	d.mutex.Unlock()
 	var userID, accessToken, deviceID string
 	if isAdmin {
 		userID, accessToken, deviceID = client.RegisterSharedSecret(t, localpart, password, isAdmin)
@@ -110,7 +116,9 @@ func (d *Deployment) RegisterUser(t *testing.T, hsName, localpart, password stri
 	}
 
 	// remember the token so subsequent calls to deployment.Client return the user
+	d.mutex.Lock()
 	dep.AccessTokens[userID] = accessToken
+	d.mutex.Unlock()
 
 	client.UserID = userID
 	client.AccessToken = accessToken
