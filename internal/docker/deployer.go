@@ -155,7 +155,7 @@ func (d *Deployer) Destroy(dep *Deployment, printServerLogs bool, testName strin
 		if printServerLogs {
 			// If we want the logs we gracefully stop the containers to allow
 			// the logs to be flushed.
-			timeout := 1 * time.Second
+			timeout := 2 * time.Second
 			err := d.Docker.ContainerStop(context.Background(), hsDep.ContainerID, &timeout)
 			if err != nil {
 				log.Printf("Destroy: Failed to destroy container %s : %s\n", hsDep.ContainerID, err)
@@ -439,7 +439,7 @@ func waitForPorts(ctx context.Context, docker *client.Client, containerID string
 		if err == nil {
 			break
 		}
-		time.Sleep(500 * time.Millisecond)
+		time.Sleep(50 * time.Millisecond)
 	}
 	return baseURL, fedBaseURL, nil
 }
