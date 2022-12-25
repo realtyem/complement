@@ -126,7 +126,7 @@ jobs:
 
       - run: |
           set -o pipefail &&
-          ${{ matrix.env }} go test -v -parallel=4 -json -tags "${{ matrix.tags }}" -timeout "${{ matrix.timeout }}" ./tests/... 2>&1 | gotestfmt
+          ${{ matrix.env }} go test -v -p=1 -parallel=4 -json -tags "${{ matrix.tags }}" -timeout "${{ matrix.timeout }}" ./tests/... 2>&1 | gotestfmt
         shell: bash # required for pipefail to be A Thing. pipefail is required to stop gotestfmt swallowing non-zero exit codes
         name: Run Complement Tests
         env:
