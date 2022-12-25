@@ -3,6 +3,7 @@ package federation
 import (
 	"encoding/json"
 	"fmt"
+	"sync"
 	"testing"
 
 	"github.com/matrix-org/gomatrixserverlib"
@@ -18,6 +19,7 @@ type ServerRoom struct {
 	Timeline           []*gomatrixserverlib.Event
 	ForwardExtremities []string
 	Depth              int64
+	mutex              sync.Mutex
 }
 
 // newRoom creates an empty room structure with no events
@@ -36,12 +38,16 @@ func (r *ServerRoom) AddEvent(ev *gomatrixserverlib.Event) {
 	if ev.StateKey() != nil {
 		r.replaceCurrentState(ev)
 	}
+	r.mutex.Lock()
 	r.Timeline = append(r.Timeline, ev)
+	r.mutex.Unlock()
 	// update extremities and depth
 	if ev.Depth() > r.Depth {
 		r.Depth = ev.Depth()
 	}
+	r.mutex.Lock()
 	r.ForwardExtremities = []string{ev.EventID()}
+	r.mutex.Unlock()
 }
 
 // AuthEvents returns the state event IDs of the auth events which authenticate this event
