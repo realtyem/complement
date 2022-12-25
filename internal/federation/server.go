@@ -52,6 +52,8 @@ type Server struct {
 	aliases               map[string]string
 	rooms                 map[string]*ServerRoom
 	keyRing               *gomatrixserverlib.KeyRing
+
+	mutex   sync.Mutex
 }
 
 // NewServer creates a new federation server with configured options.
@@ -207,9 +209,14 @@ func (s *Server) MustSendTransaction(t *testing.T, deployment *docker.Deployment
 		PDUs:          pdus,
 		EDUs:          edus,
 	})
+	// select {
+	// case <- ctx.Done():
+	// 	t.Logf("Context finished")
+	// }
 	if err != nil {
 		t.Fatalf("MustSendTransaction: %s", err)
 	}
+	// t.Logf("Context info %v", ctx)
 	for eventID, e := range resp.PDUs {
 		if e.Error != "" {
 			t.Fatalf("MustSendTransaction: response for %s contained error: %s", eventID, e.Error)
