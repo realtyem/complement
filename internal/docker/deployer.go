@@ -106,10 +106,10 @@ func (d *Deployer) Deploy(ctx context.Context, blueprintName string, pkgNamespac
 	wg.Add(len(images)) // ensure we wait until all images have deployed
 	deployImg := func(img types.ImageSummary) error {
 		defer wg.Done()
-		mu.Lock()
+		dep.mutex.Lock()
 		d.Counter++
 		// counter := d.Counter
-		mu.Unlock()
+		dep.mutex.Unlock()
 		hsName := img.Labels["complement_hs_name"]
 		// contextStr := img.Labels["complement_context"]
 		contextStr := fmt.Sprintf("%s.%s.%s.%s", d.config.PackageNamespace, d.DeployNamespace, blueprintName, hsName)
@@ -127,10 +127,10 @@ func (d *Deployer) Deploy(ctx context.Context, blueprintName string, pkgNamespac
 			}
 			return fmt.Errorf("Deploy: Failed to deploy image %+v : %w", img, err)
 		}
-		mu.Lock()
+		dep.mutex.Lock()
 		d.log("%s -> %s (%s)\n", contextStr, deployment.BaseURL, deployment.ContainerID)
 		dep.HS[hsName] = deployment
-		mu.Unlock()
+		dep.mutex.Unlock()
 		return nil
 	}
 
