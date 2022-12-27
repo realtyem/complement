@@ -957,7 +957,8 @@ func TestPartialStateJoin(t *testing.T) {
 				t.Errorf("Did not find %s's m.room.member event in lazy-loading /sync response: %s", event2.Sender(), err)
 			}
 		})
-
+	})
+	t.Run("parallel2", func(t *testing.T) {
 		// incremental sync must return memberships of event senders even when they aren't present in
 		// the partial room state.
 		t.Run("Lazy-loading incremental sync includes remote memberships during partial state join", func(t *testing.T) {
