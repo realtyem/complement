@@ -395,9 +395,8 @@ func TestPartialStateJoin(t *testing.T) {
 
 		// we should be able to receive typing EDU over federation during the resync
 		t.Run("CanReceiveTypingDuringPartialStateJoin", func(t *testing.T) {
-			deployment := Deploy(t, b.BlueprintAlice)
-			defer deployment.Destroy(t)
-			alice := deployment.Client(t, "hs1", "@alice:hs1")
+			t.Parallel()
+			alice := deployment.RegisterUser(t, "hs1", "t42alice", "secret", false)
 
 			server := createTestServer(t, deployment)
 			cancel := server.Listen()
@@ -477,9 +476,8 @@ func TestPartialStateJoin(t *testing.T) {
 		t.Run("CanReceivePresenceDuringPartialStateJoin", func(t *testing.T) {
 			// See https://github.com/matrix-org/synapse/issues/13008")
 			t.Skip("Presence EDUs are currently dropped during a resync")
-			deployment := Deploy(t, b.BlueprintAlice)
-			defer deployment.Destroy(t)
-			alice := deployment.Client(t, "hs1", "@alice:hs1")
+			t.Parallel()
+			alice := deployment.RegisterUser(t, "hs1", "t43alice", "secret", false)
 
 			server := createTestServer(t, deployment)
 			cancel := server.Listen()
@@ -524,9 +522,8 @@ func TestPartialStateJoin(t *testing.T) {
 
 		// we should be able to receive to_device EDU over federation during the resync
 		t.Run("CanReceiveToDeviceDuringPartialStateJoin", func(t *testing.T) {
-			deployment := Deploy(t, b.BlueprintAlice)
-			defer deployment.Destroy(t)
-			alice := deployment.Client(t, "hs1", "@alice:hs1")
+			t.Parallel()
+			alice := deployment.RegisterUser(t, "hs1", "t44alice", "secret", false)
 
 			server := createTestServer(t, deployment)
 			cancel := server.Listen()
@@ -574,9 +571,8 @@ func TestPartialStateJoin(t *testing.T) {
 
 		// we should be able to receive receipt EDU over federation during the resync
 		t.Run("CanReceiveReceiptDuringPartialStateJoin", func(t *testing.T) {
-			deployment := Deploy(t, b.BlueprintAlice)
-			defer deployment.Destroy(t)
-			alice := deployment.Client(t, "hs1", "@alice:hs1")
+			t.Parallel()
+			alice := deployment.RegisterUser(t, "hs1", "t45alice", "secret", false)
 
 			server := createTestServer(t, deployment)
 			cancel := server.Listen()
@@ -627,9 +623,8 @@ func TestPartialStateJoin(t *testing.T) {
 
 		// we should be able to receive device list update EDU over federation during the resync
 		t.Run("CanReceiveDeviceListUpdateDuringPartialStateJoin", func(t *testing.T) {
-			deployment := Deploy(t, b.BlueprintAlice)
-			defer deployment.Destroy(t)
-			alice := deployment.Client(t, "hs1", "@alice:hs1")
+			t.Parallel()
+			alice := deployment.RegisterUser(t, "hs1", "t46alice", "secret", false)
 
 			server := createTestServer(t, deployment)
 			cancel := server.Listen()
@@ -678,9 +673,8 @@ func TestPartialStateJoin(t *testing.T) {
 
 		// we should be able to receive signing key update EDU over federation during the resync
 		t.Run("CanReceiveSigningKeyUpdateDuringPartialStateJoin", func(t *testing.T) {
-			deployment := Deploy(t, b.BlueprintAlice)
-			defer deployment.Destroy(t)
-			alice := deployment.Client(t, "hs1", "@alice:hs1")
+			t.Parallel()
+			alice := deployment.RegisterUser(t, "hs1", "t47alice", "secret", false)
 
 			server := createTestServer(t, deployment)
 			cancel := server.Listen()
