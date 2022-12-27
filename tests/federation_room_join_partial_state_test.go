@@ -118,156 +118,156 @@ func TestPartialStateJoin(t *testing.T) {
 	deployment := Deploy(t, b.BlueprintAlice)
 	defer deployment.Destroy(t)
 
-	// test that a partial-state join continues syncing state after a restart
-	// the same as SyncBlocksDuringPartialStateJoin, with a restart in the middle
-	t.Run("PartialStateJoinContinuesAfterRestart", func(t *testing.T) {
-		t.Parallel()
-		deployment := Deploy(t, b.BlueprintAlice)
-		defer deployment.Destroy(t)
+	t.Run("parallel", func(t *testing.T) {
+		// test that a partial-state join continues syncing state after a restart
+		// the same as SyncBlocksDuringPartialStateJoin, with a restart in the middle
+		t.Run("PartialStateJoinContinuesAfterRestart", func(t *testing.T) {
+			t.Parallel()
+			deployment := Deploy(t, b.BlueprintAlice)
+			defer deployment.Destroy(t)
 
-		alice := deployment.Client(t, "hs1", "@alice:hs1")
+			alice := deployment.Client(t, "hs1", "@alice:hs1")
 
-		server := createTestServer(t, deployment)
-		cancel := server.Listen()
-		defer cancel()
-		serverRoom := createTestRoom(t, server, alice.GetDefaultRoomVersion(t))
-		psjResult := beginPartialStateJoin(t, server, serverRoom, alice)
-		defer psjResult.Destroy(t)
+			server := createTestServer(t, deployment)
+			cancel := server.Listen()
+			defer cancel()
+			serverRoom := createTestRoom(t, server, alice.GetDefaultRoomVersion(t))
+			psjResult := beginPartialStateJoin(t, server, serverRoom, alice)
+			defer psjResult.Destroy(t)
 
-		// Alice has now joined the room, and the server is syncing the state in the background.
+			// Alice has now joined the room, and the server is syncing the state in the background.
 
-		// wait for the state_ids request to arrive
-		psjResult.AwaitStateIdsRequest(t)
+			// wait for the state_ids request to arrive
+			psjResult.AwaitStateIdsRequest(t)
 
-		// restart the homeserver
-		err := deployment.Restart(t)
-		if err != nil {
-			t.Errorf("Failed to restart homeserver: %s", err)
-		}
+			// restart the homeserver
+			err := deployment.Restart(t)
+			if err != nil {
+				t.Errorf("Failed to restart homeserver: %s", err)
+			}
 
-		// attempts to sync should block. Fire off a goroutine to try it.
-		syncResponseChan := make(chan gjson.Result)
-		defer close(syncResponseChan)
-		go func() {
-			response, _ := alice.MustSync(t, client.SyncReq{})
-			syncResponseChan <- response
-		}()
+			// attempts to sync should block. Fire off a goroutine to try it.
+			syncResponseChan := make(chan gjson.Result)
+			defer close(syncResponseChan)
+			go func() {
+				response, _ := alice.MustSync(t, client.SyncReq{})
+				syncResponseChan <- response
+			}()
 
-		// we expect another state_ids request to arrive.
-		// we'd do another AwaitStateIdsRequest, except it's single-use.
+			// we expect another state_ids request to arrive.
+			// we'd do another AwaitStateIdsRequest, except it's single-use.
 
-		// the client-side requests should still be waiting
-		select {
-		case <-syncResponseChan:
-			t.Fatalf("Sync completed before state resync complete")
-		default:
-		}
+			// the client-side requests should still be waiting
+			select {
+			case <-syncResponseChan:
+				t.Fatalf("Sync completed before state resync complete")
+			default:
+			}
 
-		// release the federation /state response
-		psjResult.FinishStateRequest()
+			// release the federation /state response
+			psjResult.FinishStateRequest()
 
-		// the /sync request should now complete, with the new room
-		var syncRes gjson.Result
-		select {
-		case <-time.After(2 * time.Second):
-			t.Fatalf("/sync request request did not complete")
-		case syncRes = <-syncResponseChan:
-		}
+			// the /sync request should now complete, with the new room
+			var syncRes gjson.Result
+			select {
+			case <-time.After(2 * time.Second):
+				t.Fatalf("/sync request request did not complete")
+			case syncRes = <-syncResponseChan:
+			}
 
-		roomRes := syncRes.Get("rooms.join." + client.GjsonEscape(serverRoom.RoomID))
-		if !roomRes.Exists() {
-			t.Fatalf("/sync completed without join to new room\n")
-		}
-	})
-
-	// test that a partial-state join can fall back to other homeservers when re-syncing
-	// partial state.
-	t.Run("PartialStateJoinSyncsUsingOtherHomeservers", func(t *testing.T) {
-		t.Parallel()
-		// set up 3 homeservers: hs1, hs2 and complement
-		deployment := Deploy(t, b.BlueprintFederationTwoLocalOneRemote)
-		defer deployment.Destroy(t)
-		alice := deployment.Client(t, "hs1", "@alice:hs1")
-		charlie := deployment.Client(t, "hs2", "@charlie:hs2")
-
-		// create a public room
-		roomID := alice.CreateRoom(t, map[string]interface{}{
-			"preset": "public_chat",
+			roomRes := syncRes.Get("rooms.join." + client.GjsonEscape(serverRoom.RoomID))
+			if !roomRes.Exists() {
+				t.Fatalf("/sync completed without join to new room\n")
+			}
 		})
 
-		// create the complement homeserver
-		server := createTestServer(t, deployment)
-		cancelListener := server.Listen()
-		defer cancelListener()
+		// test that a partial-state join can fall back to other homeservers when re-syncing
+		// partial state.
+		t.Run("PartialStateJoinSyncsUsingOtherHomeservers", func(t *testing.T) {
+			t.Parallel()
+			// set up 3 homeservers: hs1, hs2 and complement
+			deployment := Deploy(t, b.BlueprintFederationTwoLocalOneRemote)
+			defer deployment.Destroy(t)
+			alice := deployment.Client(t, "hs1", "@alice:hs1")
+			charlie := deployment.Client(t, "hs2", "@charlie:hs2")
 
-		// join complement to the public room
-		room := server.MustJoinRoom(t, deployment, "hs1", roomID, server.UserID("david"))
+			// create a public room
+			roomID := alice.CreateRoom(t, map[string]interface{}{
+				"preset": "public_chat",
+			})
 
-		// we expect a /state_ids request from hs2 after it joins the room
-		// we will respond to the request with garbage
-		fedStateIdsRequestReceivedWaiter := NewWaiter()
-		fedStateIdsSendResponseWaiter := NewWaiter()
-		server.Mux().Handle(
-			fmt.Sprintf("/_matrix/federation/v1/state_ids/%s", roomID),
-			http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-				queryParams := req.URL.Query()
-				t.Logf("Incoming state_ids request for event %s in room %s", queryParams["event_id"], roomID)
-				fedStateIdsRequestReceivedWaiter.Finish()
-				fedStateIdsSendResponseWaiter.Wait(t, 60*time.Second)
-				t.Logf("Replying to /state_ids request with invalid response")
+			// create the complement homeserver
+			server := createTestServer(t, deployment)
+			cancelListener := server.Listen()
+			defer cancelListener()
 
-				w.WriteHeader(200)
+			// join complement to the public room
+			room := server.MustJoinRoom(t, deployment, "hs1", roomID, server.UserID("david"))
 
-				if _, err := w.Write([]byte("{}")); err != nil {
-					t.Errorf("Error writing to request: %v", err)
-				}
-			}),
-		).Methods("GET")
+			// we expect a /state_ids request from hs2 after it joins the room
+			// we will respond to the request with garbage
+			fedStateIdsRequestReceivedWaiter := NewWaiter()
+			fedStateIdsSendResponseWaiter := NewWaiter()
+			server.Mux().Handle(
+				fmt.Sprintf("/_matrix/federation/v1/state_ids/%s", roomID),
+				http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+					queryParams := req.URL.Query()
+					t.Logf("Incoming state_ids request for event %s in room %s", queryParams["event_id"], roomID)
+					fedStateIdsRequestReceivedWaiter.Finish()
+					fedStateIdsSendResponseWaiter.Wait(t, 60*time.Second)
+					t.Logf("Replying to /state_ids request with invalid response")
 
-		// join charlie on hs2 to the room, via the complement homeserver
-		charlie.JoinRoom(t, roomID, []string{server.ServerName()})
+					w.WriteHeader(200)
 
-		// and let hs1 know that charlie has joined,
-		// otherwise hs1 will refuse /state_ids requests
-		member_event := room.CurrentState("m.room.member", charlie.UserID).JSON()
-		server.MustSendTransaction(t, deployment, "hs1", []json.RawMessage{member_event}, nil)
-		alice.MustSyncUntil(t, client.SyncReq{}, client.SyncJoinedTo(charlie.UserID, roomID))
+					if _, err := w.Write([]byte("{}")); err != nil {
+						t.Errorf("Error writing to request: %v", err)
+					}
+				}),
+			).Methods("GET")
 
-		// wait until hs2 starts syncing state
-		fedStateIdsRequestReceivedWaiter.Waitf(t, 5*time.Second, "Waiting for /state_ids request")
+			// join charlie on hs2 to the room, via the complement homeserver
+			charlie.JoinRoom(t, roomID, []string{server.ServerName()})
 
-		syncResponseChan := make(chan gjson.Result)
-		defer close(syncResponseChan)
-		go func() {
-			response, _ := charlie.MustSync(t, client.SyncReq{})
-			syncResponseChan <- response
-		}()
+			// and let hs1 know that charlie has joined,
+			// otherwise hs1 will refuse /state_ids requests
+			member_event := room.CurrentState("m.room.member", charlie.UserID).JSON()
+			server.MustSendTransaction(t, deployment, "hs1", []json.RawMessage{member_event}, nil)
+			alice.MustSyncUntil(t, client.SyncReq{}, client.SyncJoinedTo(charlie.UserID, roomID))
 
-		// the client-side requests should still be waiting
-		select {
-		case <-syncResponseChan:
-			t.Fatalf("hs2 sync completed before state resync complete")
-		default:
-		}
+			// wait until hs2 starts syncing state
+			fedStateIdsRequestReceivedWaiter.Waitf(t, 5*time.Second, "Waiting for /state_ids request")
 
-		// reply to hs2 with a bogus /state_ids response
-		fedStateIdsSendResponseWaiter.Finish()
+			syncResponseChan := make(chan gjson.Result)
+			defer close(syncResponseChan)
+			go func() {
+				response, _ := charlie.MustSync(t, client.SyncReq{})
+				syncResponseChan <- response
+			}()
 
-		// charlie's /sync request should now complete, with the new room
-		var syncRes gjson.Result
-		select {
-		case <-time.After(2 * time.Second):
-			t.Fatalf("hs2 /sync request request did not complete")
-		case syncRes = <-syncResponseChan:
-		}
+			// the client-side requests should still be waiting
+			select {
+			case <-syncResponseChan:
+				t.Fatalf("hs2 sync completed before state resync complete")
+			default:
+			}
 
-		roomRes := syncRes.Get("rooms.join." + client.GjsonEscape(roomID))
-		if !roomRes.Exists() {
-			t.Fatalf("hs2 /sync completed without join to new room\n")
-		}
-	})
+			// reply to hs2 with a bogus /state_ids response
+			fedStateIdsSendResponseWaiter.Finish()
 
-	t.Run("parallel", func(t *testing.T) {
+			// charlie's /sync request should now complete, with the new room
+			var syncRes gjson.Result
+			select {
+			case <-time.After(2 * time.Second):
+				t.Fatalf("hs2 /sync request request did not complete")
+			case syncRes = <-syncResponseChan:
+			}
+
+			roomRes := syncRes.Get("rooms.join." + client.GjsonEscape(roomID))
+			if !roomRes.Exists() {
+				t.Fatalf("hs2 /sync completed without join to new room\n")
+			}
+		})
+
 		// test that a regular /sync request made during a partial-state /send_join
 		// request blocks until the state is correctly synced.
 		t.Run("SyncBlocksDuringPartialStateJoin", func(t *testing.T) {
@@ -625,7 +625,9 @@ func TestPartialStateJoin(t *testing.T) {
 			)
 			psjResult.FinishStateRequest()
 		})
+	})
 
+	t.Run("parallel2", func(t *testing.T) {
 		// we should be able to receive device list update EDU over federation during the resync
 		t.Run("CanReceiveDeviceListUpdateDuringPartialStateJoin", func(t *testing.T) {
 			t.Parallel()
@@ -962,8 +964,7 @@ func TestPartialStateJoin(t *testing.T) {
 				t.Errorf("Did not find %s's m.room.member event in lazy-loading /sync response: %s", event2.Sender(), err)
 			}
 		})
-	})
-	t.Run("parallel2", func(t *testing.T) {
+
 		// incremental sync must return memberships of event senders even when they aren't present in
 		// the partial room state.
 		t.Run("Lazy-loading incremental sync includes remote memberships during partial state join", func(t *testing.T) {
@@ -1071,7 +1072,8 @@ func TestPartialStateJoin(t *testing.T) {
 				})
 			}
 		})
-
+	})
+	t.Run("parallel3", func(t *testing.T) {
 		// test a lazy-load-members sync while re-syncing partial state, followed by completion of state syncing,
 		// followed by a gappy sync. the gappy sync should include the correct member state,
 		// since it was not sent on the previous sync.
