@@ -262,7 +262,7 @@ func TestPartialStateJoin(t *testing.T) {
 		}
 	})
 
-	t.Run("parallel 1", func(t *testing.T) {
+	t.Run("parallel", func(t *testing.T) {
 		// test that a regular /sync request made during a partial-state /send_join
 		// request blocks until the state is correctly synced.
 		t.Run("SyncBlocksDuringPartialStateJoin", func(t *testing.T) {
@@ -1065,9 +1065,7 @@ func TestPartialStateJoin(t *testing.T) {
 				})
 			}
 		})
-	})
 
-	t.Run("parallel 2", func (t *testing.T) {
 		// test a lazy-load-members sync while re-syncing partial state, followed by completion of state syncing,
 		// followed by a gappy sync. the gappy sync should include the correct member state,
 		// since it was not sent on the previous sync.
@@ -1839,6 +1837,7 @@ func TestPartialStateJoin(t *testing.T) {
 		// about in the /send_join response.
 		t.Run("Room aliases can be added and queried during a resync", func(t *testing.T) {
 			// Alice begins a partial join to a room.
+			t.Parallel()
 			alice := deployment.RegisterUser(t, "hs1", "t40alice", "secret", false)
 			server := createTestServer(t, deployment)
 			cancel := server.Listen()
@@ -1890,6 +1889,7 @@ func TestPartialStateJoin(t *testing.T) {
 		// the resync.
 		t.Run("Room aliases can be added and deleted during a resync", func(t *testing.T) {
 			// Alice begins a partial join to a room.
+			t.Parallel()
 			alice := deployment.RegisterUser(t, "hs1", "t41alice", "secret", false)
 			server := createTestServer(t, deployment)
 			cancel := server.Listen()
