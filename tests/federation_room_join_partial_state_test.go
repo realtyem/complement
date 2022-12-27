@@ -1935,6 +1935,7 @@ func TestPartialStateJoin(t *testing.T) {
 		// test that device list updates are sent to the remote homeservers listed in the
 		// `/send_join` response in a room with partial state.
 		t.Run("Device list updates reach all servers in partial state rooms", func(t *testing.T) {
+			t.Parallel()
 			alice, server1, server2, deviceListUpdateChannel1, deviceListUpdateChannel2, room, cleanup := setupOutgoingDeviceListUpdateTest(t, deployment, "t23alice")
 			defer cleanup()
 
@@ -1966,6 +1967,7 @@ func TestPartialStateJoin(t *testing.T) {
 		// test that device list updates are additionally sent to remote homeservers that join after
 		// the local homeserver.
 		t.Run("Device list updates reach newly joined servers in partial state rooms", func(t *testing.T) {
+			t.Parallel()
 			alice, server1, server2, deviceListUpdateChannel1, deviceListUpdateChannel2, room, cleanup := setupOutgoingDeviceListUpdateTest(t, deployment, "t24alice")
 			defer cleanup()
 
@@ -2010,6 +2012,7 @@ func TestPartialStateJoin(t *testing.T) {
 		// under test must do so, as it has no way of knowing that a remote homeserver has no more
 		// users in the room.
 		t.Run("Device list updates no longer reach departed servers after partial state join completes", func(t *testing.T) {
+			t.Parallel()
 			alice, server1, server2, deviceListUpdateChannel1, deviceListUpdateChannel2, room, cleanup := setupOutgoingDeviceListUpdateTest(t, deployment, "t25alice")
 			defer cleanup()
 
@@ -2194,6 +2197,7 @@ func TestPartialStateJoin(t *testing.T) {
 		// test that device list updates are sent to remote homeservers incorrectly believed not to
 		// be in a room with partial state once the partial state join completes.
 		t.Run("Device list updates reach incorrectly kicked servers once partial state join completes", func(t *testing.T) {
+			t.Parallel()
 			alice, server1, server2, deviceListUpdateChannel1, deviceListUpdateChannel2, room, cleanup := setupOutgoingDeviceListUpdateTest(t, deployment, "t26alice")
 			defer cleanup()
 
@@ -2215,6 +2219,7 @@ func TestPartialStateJoin(t *testing.T) {
 		// be in a room with partial state once the partial state join completes, even if the remote
 		// homeserver leaves the room beforehand.
 		t.Run("Device list updates reach incorrectly kicked servers once partial state join completes even though remote server left room", func(t *testing.T) {
+			t.Parallel()
 			alice, server1, server2, deviceListUpdateChannel1, deviceListUpdateChannel2, room, cleanup := setupOutgoingDeviceListUpdateTest(t, deployment, "t27alice")
 			defer cleanup()
 
@@ -2244,6 +2249,7 @@ func TestPartialStateJoin(t *testing.T) {
 		// test that device list updates are sent to remote homeservers incorrectly omitted from the
 		// `/send_join` response once the partial state join completes.
 		t.Run("Device list updates reach incorrectly absent servers once partial state join completes", func(t *testing.T) {
+			t.Parallel()
 			alice, server1, server2, deviceListUpdateChannel1, deviceListUpdateChannel2, room, cleanup := setupOutgoingDeviceListUpdateTest(
 				t, deployment, "t28alice", handleSendJoinRequestsWithIncompleteServersInRoom,
 			)
@@ -2268,6 +2274,7 @@ func TestPartialStateJoin(t *testing.T) {
 		// `/send_join` response once the partial state join completes, even if the remote
 		// homeserver leaves the room beforehand.
 		t.Run("Device list updates reach incorrectly absent servers once partial state join completes even though remote server left room", func(t *testing.T) {
+			t.Parallel()
 			alice, server1, server2, deviceListUpdateChannel1, deviceListUpdateChannel2, room, cleanup := setupOutgoingDeviceListUpdateTest(
 				t, deployment, "t29alice", handleSendJoinRequestsWithIncompleteServersInRoom,
 			)
