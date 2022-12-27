@@ -121,7 +121,11 @@ func TestPartialStateJoin(t *testing.T) {
 	// test that a partial-state join continues syncing state after a restart
 	// the same as SyncBlocksDuringPartialStateJoin, with a restart in the middle
 	t.Run("PartialStateJoinContinuesAfterRestart", func(t *testing.T) {
-		alice := deployment.RegisterUser(t, "hs1", "t1alice", "secret", false)
+		t.Parallel()
+		deployment := Deploy(t, b.BlueprintAlice)
+		defer deployment.Destroy(t)
+
+		alice := deployment.Client(t, "hs1", "@alice:hs1")
 
 		server := createTestServer(t, deployment)
 		cancel := server.Listen()
