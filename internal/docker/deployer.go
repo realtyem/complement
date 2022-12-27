@@ -125,10 +125,10 @@ func (d *Deployer) Deploy(ctx context.Context, blueprintName string) (*Deploymen
 			}
 			return fmt.Errorf("Deploy: Failed to deploy image %+v : %w", img, err)
 		}
-		mu.Lock()
+		dep.mutex.Lock()
 		d.log("%s -> %s (%s)\n", contextStr, deployment.BaseURL, deployment.ContainerID)
 		dep.HS[hsName] = deployment
-		mu.Unlock()
+		dep.mutex.Unlock()
 		return nil
 	}
 
