@@ -165,7 +165,7 @@ func TestPartialStateJoin(t *testing.T) {
 		// the /sync request should now complete, with the new room
 		var syncRes gjson.Result
 		select {
-		case <-time.After(1 * time.Second):
+		case <-time.After(2 * time.Second):
 			t.Fatalf("/sync request request did not complete")
 		case syncRes = <-syncResponseChan:
 		}
@@ -179,6 +179,7 @@ func TestPartialStateJoin(t *testing.T) {
 	// test that a partial-state join can fall back to other homeservers when re-syncing
 	// partial state.
 	t.Run("PartialStateJoinSyncsUsingOtherHomeservers", func(t *testing.T) {
+		t.Parallel()
 		// set up 3 homeservers: hs1, hs2 and complement
 		deployment := Deploy(t, b.BlueprintFederationTwoLocalOneRemote)
 		defer deployment.Destroy(t)
@@ -251,7 +252,7 @@ func TestPartialStateJoin(t *testing.T) {
 		// charlie's /sync request should now complete, with the new room
 		var syncRes gjson.Result
 		select {
-		case <-time.After(1 * time.Second):
+		case <-time.After(2 * time.Second):
 			t.Fatalf("hs2 /sync request request did not complete")
 		case syncRes = <-syncResponseChan:
 		}
@@ -302,7 +303,7 @@ func TestPartialStateJoin(t *testing.T) {
 			// the /sync request should now complete, with the new room
 			var syncRes gjson.Result
 			select {
-			case <-time.After(1 * time.Second):
+			case <-time.After(2 * time.Second):
 				t.Fatalf("/sync request request did not complete")
 			case syncRes = <-syncResponseChan:
 			}
@@ -388,8 +389,8 @@ func TestPartialStateJoin(t *testing.T) {
 				if !(pdu.Type() == "m.room.message") {
 					t.Error("Received PDU is not of type m.room.message")
 				}
-			case <-time.After(1 * time.Second):
-				t.Error("Message PDU not received after one second")
+			case <-time.After(2 * time.Second):
+				t.Error("Message PDU not received after two seconds")
 			}
 		})
 
@@ -1049,7 +1050,7 @@ func TestPartialStateJoin(t *testing.T) {
 
 			// the client-side /members request should now complete, with a response that includes charlie and derek.
 			select {
-			case <-time.After(1 * time.Second):
+			case <-time.After(2 * time.Second):
 				t.Fatalf("client-side /members request did not complete")
 			case res := <-clientMembersRequestResponseChan:
 				must.MatchResponse(t, res, match.HTTPResponse{
@@ -1697,7 +1698,7 @@ func TestPartialStateJoin(t *testing.T) {
 			// the /joined_members request should now complete, with the new room
 			var jmRes *http.Response
 			select {
-			case <-time.After(1 * time.Second):
+			case <-time.After(2 * time.Second):
 				t.Fatalf("/joined_members request request did not complete. Expected it to complete.")
 			case jmRes = <-jmResponseChan:
 			}
@@ -2022,7 +2023,7 @@ func TestPartialStateJoin(t *testing.T) {
 			t.Helper()
 
 			select {
-			case <-time.After(1 * time.Second):
+			case <-time.After(2 * time.Second):
 				t.Fatalf(errFormat, args...)
 			case <-channel:
 			}
@@ -2037,7 +2038,7 @@ func TestPartialStateJoin(t *testing.T) {
 			t.Helper()
 
 			select {
-			case <-time.After(1 * time.Second):
+			case <-time.After(2 * time.Second):
 			case <-channel:
 				t.Fatalf(errFormat, args...)
 			}
