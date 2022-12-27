@@ -121,7 +121,7 @@ func TestPartialStateJoin(t *testing.T) {
 	// test that a partial-state join continues syncing state after a restart
 	// the same as SyncBlocksDuringPartialStateJoin, with a restart in the middle
 	t.Run("PartialStateJoinContinuesAfterRestart", func(t *testing.T) {
-		alice := deployment.RegisterUser(t, "hs1", "t12alice", "secret", false)
+		alice := deployment.RegisterUser(t, "hs1", "t1alice", "secret", false)
 
 		server := createTestServer(t, deployment)
 		cancel := server.Listen()
@@ -267,7 +267,7 @@ func TestPartialStateJoin(t *testing.T) {
 		// request blocks until the state is correctly synced.
 		t.Run("SyncBlocksDuringPartialStateJoin", func(t *testing.T) {
 			t.Parallel()
-			alice := deployment.RegisterUser(t, "hs1", "t1alice", "secret", false)
+			alice := deployment.RegisterUser(t, "hs1", "t2alice", "secret", false)
 
 			server := createTestServer(t, deployment)
 			cancel := server.Listen()
@@ -330,7 +330,7 @@ func TestPartialStateJoin(t *testing.T) {
 		// when Alice does a lazy-loading sync, she should see the room immediately
 		t.Run("CanLazyLoadingSyncDuringPartialStateJoin", func(t *testing.T) {
 			t.Parallel()
-			alice := deployment.RegisterUser(t, "hs1", "t2alice", "secret", false)
+			alice := deployment.RegisterUser(t, "hs1", "t3alice", "secret", false)
 
 			server := createTestServer(t, deployment)
 			cancel := server.Listen()
@@ -351,7 +351,7 @@ func TestPartialStateJoin(t *testing.T) {
 		// we should be able to send events in the room, during the resync
 		t.Run("CanSendEventsDuringPartialStateJoin", func(t *testing.T) {
 			t.Parallel()
-			alice := deployment.RegisterUser(t, "hs1", "t3alice", "secret", false)
+			alice := deployment.RegisterUser(t, "hs1", "t4alice", "secret", false)
 
 			pdusChannel := make(chan *gomatrixserverlib.Event)
 			server := createTestServer(
@@ -396,7 +396,7 @@ func TestPartialStateJoin(t *testing.T) {
 		// we should be able to receive typing EDU over federation during the resync
 		t.Run("CanReceiveTypingDuringPartialStateJoin", func(t *testing.T) {
 			t.Parallel()
-			alice := deployment.RegisterUser(t, "hs1", "t42alice", "secret", false)
+			alice := deployment.RegisterUser(t, "hs1", "t5alice", "secret", false)
 
 			server := createTestServer(t, deployment)
 			cancel := server.Listen()
@@ -477,7 +477,7 @@ func TestPartialStateJoin(t *testing.T) {
 			// See https://github.com/matrix-org/synapse/issues/13008")
 			t.Skip("Presence EDUs are currently dropped during a resync")
 			t.Parallel()
-			alice := deployment.RegisterUser(t, "hs1", "t43alice", "secret", false)
+			alice := deployment.RegisterUser(t, "hs1", "t6alice", "secret", false)
 
 			server := createTestServer(t, deployment)
 			cancel := server.Listen()
@@ -523,7 +523,7 @@ func TestPartialStateJoin(t *testing.T) {
 		// we should be able to receive to_device EDU over federation during the resync
 		t.Run("CanReceiveToDeviceDuringPartialStateJoin", func(t *testing.T) {
 			t.Parallel()
-			alice := deployment.RegisterUser(t, "hs1", "t44alice", "secret", false)
+			alice := deployment.RegisterUser(t, "hs1", "t7alice", "secret", false)
 
 			server := createTestServer(t, deployment)
 			cancel := server.Listen()
@@ -572,7 +572,7 @@ func TestPartialStateJoin(t *testing.T) {
 		// we should be able to receive receipt EDU over federation during the resync
 		t.Run("CanReceiveReceiptDuringPartialStateJoin", func(t *testing.T) {
 			t.Parallel()
-			alice := deployment.RegisterUser(t, "hs1", "t45alice", "secret", false)
+			alice := deployment.RegisterUser(t, "hs1", "t8alice", "secret", false)
 
 			server := createTestServer(t, deployment)
 			cancel := server.Listen()
@@ -624,7 +624,7 @@ func TestPartialStateJoin(t *testing.T) {
 		// we should be able to receive device list update EDU over federation during the resync
 		t.Run("CanReceiveDeviceListUpdateDuringPartialStateJoin", func(t *testing.T) {
 			t.Parallel()
-			alice := deployment.RegisterUser(t, "hs1", "t46alice", "secret", false)
+			alice := deployment.RegisterUser(t, "hs1", "t9alice", "secret", false)
 
 			server := createTestServer(t, deployment)
 			cancel := server.Listen()
@@ -674,7 +674,7 @@ func TestPartialStateJoin(t *testing.T) {
 		// we should be able to receive signing key update EDU over federation during the resync
 		t.Run("CanReceiveSigningKeyUpdateDuringPartialStateJoin", func(t *testing.T) {
 			t.Parallel()
-			alice := deployment.RegisterUser(t, "hs1", "t47alice", "secret", false)
+			alice := deployment.RegisterUser(t, "hs1", "t10alice", "secret", false)
 
 			server := createTestServer(t, deployment)
 			cancel := server.Listen()
@@ -701,7 +701,7 @@ func TestPartialStateJoin(t *testing.T) {
 		// we should be able to receive events over federation during the resync
 		t.Run("CanReceiveEventsDuringPartialStateJoin", func(t *testing.T) {
 			t.Parallel()
-			alice := deployment.RegisterUser(t, "hs1", "t4alice", "secret", false)
+			alice := deployment.RegisterUser(t, "hs1", "t11alice", "secret", false)
 			syncToken := getSyncToken(t, alice)
 
 			server := createTestServer(t, deployment)
@@ -724,7 +724,7 @@ func TestPartialStateJoin(t *testing.T) {
 		// we should be able to receive events with a missing prev event over federation during the resync
 		t.Run("CanReceiveEventsWithMissingParentsDuringPartialStateJoin", func(t *testing.T) {
 			t.Parallel()
-			alice := deployment.RegisterUser(t, "hs1", "t5alice", "secret", false)
+			alice := deployment.RegisterUser(t, "hs1", "t12alice", "secret", false)
 			syncToken := getSyncToken(t, alice)
 
 			server := createTestServer(t, deployment)
@@ -737,7 +737,7 @@ func TestPartialStateJoin(t *testing.T) {
 			// we construct the following event graph:
 			// ... <-- M <-- A <-- B
 			//
-			// M is @t5alice:hs1's join event.
+			// M is @t12alice:hs1's join event.
 			// A and B are regular m.room.messsage events created by @derek on the Complement homeserver.
 			//
 			// initially, hs1 only knows about event M.
@@ -763,7 +763,7 @@ func TestPartialStateJoin(t *testing.T) {
 		// we should be able to receive events with partially missing prev events over federation during the resync
 		t.Run("CanReceiveEventsWithHalfMissingParentsDuringPartialStateJoin", func(t *testing.T) {
 			t.Parallel()
-			alice := deployment.RegisterUser(t, "hs1", "t6alice", "secret", false)
+			alice := deployment.RegisterUser(t, "hs1", "t13alice", "secret", false)
 			syncToken := getSyncToken(t, alice)
 
 			server := createTestServer(t, deployment)
@@ -778,7 +778,7 @@ func TestPartialStateJoin(t *testing.T) {
 			//         v          \
 			// ... <-- M <-- A <-- B
 			//
-			// M is @t6alice:hs1's join event.
+			// M is @t13alice:hs1's join event.
 			// A and B are regular m.room.messsage events created by @derek on the Complement homeserver.
 			//
 			// initially, hs1 only knows about event M.
@@ -805,7 +805,7 @@ func TestPartialStateJoin(t *testing.T) {
 		// over federation during the resync
 		t.Run("CanReceiveEventsWithHalfMissingGrandparentsDuringPartialStateJoin", func(t *testing.T) {
 			t.Parallel()
-			alice := deployment.RegisterUser(t, "hs1", "t7alice", "secret", false)
+			alice := deployment.RegisterUser(t, "hs1", "t14alice", "secret", false)
 			syncToken := getSyncToken(t, alice)
 
 			server := createTestServer(t, deployment)
@@ -820,7 +820,7 @@ func TestPartialStateJoin(t *testing.T) {
 			//         v          \
 			// ... <-- M <-- A <-- B <-- C
 			//
-			// M is @t7alice:hs1's join event.
+			// M is @t14alice:hs1's join event.
 			// A, B and C are regular m.room.messsage events created by @derek on the Complement homeserver.
 			//
 			// initially, hs1 only knows about event M.
@@ -851,7 +851,7 @@ func TestPartialStateJoin(t *testing.T) {
 		// partial room state.
 		t.Run("Lazy-loading initial sync includes remote memberships during partial state join", func(t *testing.T) {
 			t.Parallel()
-			alice := deployment.RegisterUser(t, "hs1", "t8alice", "secret", false)
+			alice := deployment.RegisterUser(t, "hs1", "t15alice", "secret", false)
 
 			server := createTestServer(t, deployment)
 			cancel := server.Listen()
@@ -891,7 +891,7 @@ func TestPartialStateJoin(t *testing.T) {
 		// partial room state.
 		t.Run("Lazy-loading gappy sync includes remote memberships during partial state join", func(t *testing.T) {
 			t.Parallel()
-			alice := deployment.RegisterUser(t, "hs1", "t9alice", "secret", false)
+			alice := deployment.RegisterUser(t, "hs1", "t16alice", "secret", false)
 			syncToken := getSyncToken(t, alice)
 
 			server := createTestServer(t, deployment)
@@ -963,7 +963,7 @@ func TestPartialStateJoin(t *testing.T) {
 		// the partial room state.
 		t.Run("Lazy-loading incremental sync includes remote memberships during partial state join", func(t *testing.T) {
 			t.Parallel()
-			alice := deployment.RegisterUser(t, "hs1", "t10alice", "secret", false)
+			alice := deployment.RegisterUser(t, "hs1", "t17alice", "secret", false)
 			syncToken := getSyncToken(t, alice)
 
 			server := createTestServer(t, deployment)
@@ -1012,7 +1012,7 @@ func TestPartialStateJoin(t *testing.T) {
 		// TODO(faster_joins): also need to test /state, and /members without an `at`, which follow a different path
 		t.Run("MembersRequestBlocksDuringPartialStateJoin", func(t *testing.T) {
 			t.Parallel()
-			alice := deployment.RegisterUser(t, "hs1", "t11alice", "secret", false)
+			alice := deployment.RegisterUser(t, "hs1", "t18alice", "secret", false)
 
 			server := createTestServer(t, deployment)
 			cancel := server.Listen()
@@ -1072,7 +1072,7 @@ func TestPartialStateJoin(t *testing.T) {
 		// since it was not sent on the previous sync.
 		t.Run("GappySyncAfterPartialStateSynced", func(t *testing.T) {
 			t.Parallel()
-			alice := deployment.RegisterUser(t, "hs1", "t13alice", "secret", false)
+			alice := deployment.RegisterUser(t, "hs1", "t19alice", "secret", false)
 
 			server := createTestServer(t, deployment)
 			cancel := server.Listen()
@@ -1167,7 +1167,7 @@ func TestPartialStateJoin(t *testing.T) {
 		// an infinite loop of de-partial-stating.
 		t.Run("Resync completes even when events arrive before their prev_events", func(t *testing.T) {
 			t.Parallel()
-			alice := deployment.RegisterUser(t, "hs1", "t14alice", "secret", false)
+			alice := deployment.RegisterUser(t, "hs1", "t20alice", "secret", false)
 			syncToken := getSyncToken(t, alice)
 
 			server := createTestServer(t, deployment)
@@ -1277,7 +1277,7 @@ func TestPartialStateJoin(t *testing.T) {
 		// do not suddenly become un-rejected during the resync
 		t.Run("Rejected events remain rejected after resync", func(t *testing.T) {
 			t.Parallel()
-			alice := deployment.RegisterUser(t, "hs1", "t15alice", "secret", false)
+			alice := deployment.RegisterUser(t, "hs1", "t21alice", "secret", false)
 			syncToken := getSyncToken(t, alice)
 
 			server := createTestServer(t, deployment)
@@ -1347,7 +1347,7 @@ func TestPartialStateJoin(t *testing.T) {
 
 		t.Run("State accepted incorrectly", func(t *testing.T) {
 			t.Parallel()
-			alice := deployment.RegisterUser(t, "hs1", "t16alice", "secret", false)
+			alice := deployment.RegisterUser(t, "hs1", "t22alice", "secret", false)
 			syncToken := getSyncToken(t, alice)
 			server := createTestServer(t, deployment)
 			cancel := server.Listen()
@@ -1426,7 +1426,7 @@ func TestPartialStateJoin(t *testing.T) {
 
 		t.Run("State rejected incorrectly", func(t *testing.T) {
 			t.Parallel()
-			alice := deployment.RegisterUser(t, "hs1", "t17alice", "secret", false)
+			alice := deployment.RegisterUser(t, "hs1", "t23alice", "secret", false)
 			syncToken := getSyncToken(t, alice)
 			server := createTestServer(t, deployment)
 			cancel := server.Listen()
@@ -1546,13 +1546,13 @@ func TestPartialStateJoin(t *testing.T) {
 		t.Run("Rejects make_join during partial join", func(t *testing.T) {
 			t.Parallel()
 			// In this test, we have 3 homeservers:
-			//   hs1 (the server under test) with @t18alice:hs1
+			//   hs1 (the server under test) with @t24alice:hs1
 			//     This is the server that will be in the middle of a partial join.
 			//   testServer1 (a Complement test server) with @bob:<server name>
 			//     This is the server that created the room originally.
 			//   testServer2 (another Complement test server) with @charlie:<server name>
 			//     This is the server that will try to make a join via testServer1.
-			alice := deployment.RegisterUser(t, "hs1", "t18alice", "secret", false)
+			alice := deployment.RegisterUser(t, "hs1", "t24alice", "secret", false)
 
 			testServer1 := createTestServer(t, deployment)
 			cancel := testServer1.Listen()
@@ -1596,7 +1596,7 @@ func TestPartialStateJoin(t *testing.T) {
 		t.Run("Rejects send_join during partial join", func(t *testing.T) {
 			t.Parallel()
 			// In this test, we have 3 homeservers:
-			//   hs1 (the server under test) with @t19alice:hs1
+			//   hs1 (the server under test) with @t25alice:hs1
 			//     This is the server that will be in the middle of a partial join.
 			//   testServer1 (a Complement test server) with @charlie:<server name>
 			//     This is the server that will create the room originally.
@@ -1605,7 +1605,7 @@ func TestPartialStateJoin(t *testing.T) {
 			//     but only after using hs1 to /make_join (as otherwise we have no way
 			//     of being able to build a request to /send_join)
 			//
-			alice := deployment.RegisterUser(t, "hs1", "t19alice", "secret", false)
+			alice := deployment.RegisterUser(t, "hs1", "t25alice", "secret", false)
 
 			testServer1 := createTestServer(t, deployment)
 			cancel := testServer1.Listen()
@@ -1662,7 +1662,7 @@ func TestPartialStateJoin(t *testing.T) {
 		// request blocks until the state is correctly synced.
 		t.Run("joined_members blocks during partial state join", func(t *testing.T) {
 			t.Parallel()
-			alice := deployment.RegisterUser(t, "hs1", "t20alice", "secret", false)
+			alice := deployment.RegisterUser(t, "hs1", "t26alice", "secret", false)
 
 			server := createTestServer(t, deployment)
 			cancel := server.Listen()
@@ -1722,13 +1722,13 @@ func TestPartialStateJoin(t *testing.T) {
 		t.Run("Rejects make_knock during partial join", func(t *testing.T) {
 			t.Parallel()
 			// In this test, we have 3 homeservers:
-			//   hs1 (the server under test) with @t21alice:hs1
+			//   hs1 (the server under test) with @t27alice:hs1
 			//     This is the server that will be in the middle of a partial join.
 			//   testServer1 (a Complement test server) with @bob:<server name>
 			//     This is the server that created the room originally.
 			//   testServer2 (another Complement test server) with @charlie:<server name>
 			//     This is the server that will try to make a knock via testServer1.
-			alice := deployment.RegisterUser(t, "hs1", "t21alice", "secret", false)
+			alice := deployment.RegisterUser(t, "hs1", "t27alice", "secret", false)
 
 			testServer1 := createTestServer(t, deployment)
 			cancel := testServer1.Listen()
@@ -1772,7 +1772,7 @@ func TestPartialStateJoin(t *testing.T) {
 		t.Run("Rejects send_knock during partial join", func(t *testing.T) {
 			t.Parallel()
 			// In this test, we have 3 homeservers:
-			//   hs1 (the server under test) with @t22alice:hs1
+			//   hs1 (the server under test) with @t28alice:hs1
 			//     This is the server that will be in the middle of a partial join.
 			//   testServer1 (a Complement test server) with @charlie:<server name>
 			//     This is the server that will create the room originally.
@@ -1781,7 +1781,7 @@ func TestPartialStateJoin(t *testing.T) {
 			//     but only after using hs1 to /make_knock (as otherwise we have no way
 			//     of being able to build a request to /send_knock)
 			//
-			alice := deployment.RegisterUser(t, "hs1", "t22alice", "secret", false)
+			alice := deployment.RegisterUser(t, "hs1", "t28alice", "secret", false)
 
 			testServer1 := createTestServer(t, deployment)
 			cancel := testServer1.Listen()
@@ -1839,7 +1839,7 @@ func TestPartialStateJoin(t *testing.T) {
 		t.Run("Room aliases can be added and queried during a resync", func(t *testing.T) {
 			// Alice begins a partial join to a room.
 			t.Parallel()
-			alice := deployment.RegisterUser(t, "hs1", "t40alice", "secret", false)
+			alice := deployment.RegisterUser(t, "hs1", "t29alice", "secret", false)
 			server := createTestServer(t, deployment)
 			cancel := server.Listen()
 			defer cancel()
@@ -1849,7 +1849,7 @@ func TestPartialStateJoin(t *testing.T) {
 			defer psjResult.Destroy(t)
 
 			// Alice creates an alias for the room
-			aliasName := "#t40alice-room:hs1"
+			aliasName := "#t29alice-room:hs1"
 			alice.MustDoFunc(
 				t,
 				"PUT",
@@ -1891,7 +1891,7 @@ func TestPartialStateJoin(t *testing.T) {
 		t.Run("Room aliases can be added and deleted during a resync", func(t *testing.T) {
 			// Alice begins a partial join to a room.
 			t.Parallel()
-			alice := deployment.RegisterUser(t, "hs1", "t41alice", "secret", false)
+			alice := deployment.RegisterUser(t, "hs1", "t30alice", "secret", false)
 			server := createTestServer(t, deployment)
 			cancel := server.Listen()
 			defer cancel()
@@ -1901,7 +1901,7 @@ func TestPartialStateJoin(t *testing.T) {
 			defer psjResult.Destroy(t)
 
 			// Alice creates an alias for the room
-			aliasName := "#t41alice-room:hs1"
+			aliasName := "#t30alice-room:hs1"
 			alice.MustDoFunc(
 				t,
 				"PUT",
@@ -2047,14 +2047,14 @@ func TestPartialStateJoin(t *testing.T) {
 		// `/send_join` response in a room with partial state.
 		t.Run("Device list updates reach all servers in partial state rooms", func(t *testing.T) {
 			t.Parallel()
-			alice, server1, server2, deviceListUpdateChannel1, deviceListUpdateChannel2, room, cleanup := setupOutgoingDeviceListUpdateTest(t, deployment, "t23alice")
+			alice, server1, server2, deviceListUpdateChannel1, deviceListUpdateChannel2, room, cleanup := setupOutgoingDeviceListUpdateTest(t, deployment, "t31alice")
 			defer cleanup()
 
 			// The room starts with @charlie:server1 and @derek:server1 in it.
-			// @elsie:server2 joins the room before @t23alice:hs1.
+			// @elsie:server2 joins the room before @t31alice:hs1.
 			room.AddEvent(createJoinEvent(t, server2, room, server2.UserID("elsie")))
 
-			// @t23alice:hs1 joins the room.
+			// @t31alice:hs1 joins the room.
 			psjResult := beginPartialStateJoin(t, server1, room, alice)
 			defer psjResult.Destroy(t)
 
@@ -2079,11 +2079,11 @@ func TestPartialStateJoin(t *testing.T) {
 		// the local homeserver.
 		t.Run("Device list updates reach newly joined servers in partial state rooms", func(t *testing.T) {
 			t.Parallel()
-			alice, server1, server2, deviceListUpdateChannel1, deviceListUpdateChannel2, room, cleanup := setupOutgoingDeviceListUpdateTest(t, deployment, "t24alice")
+			alice, server1, server2, deviceListUpdateChannel1, deviceListUpdateChannel2, room, cleanup := setupOutgoingDeviceListUpdateTest(t, deployment, "t32alice")
 			defer cleanup()
 
 			// The room starts with @charlie:server1 and @derek:server1 in it.
-			// @t24alice:hs1 joins the room.
+			// @t32alice:hs1 joins the room.
 			psjResult := beginPartialStateJoin(t, server1, room, alice)
 			defer psjResult.Destroy(t)
 
@@ -2124,14 +2124,14 @@ func TestPartialStateJoin(t *testing.T) {
 		// users in the room.
 		t.Run("Device list updates no longer reach departed servers after partial state join completes", func(t *testing.T) {
 			t.Parallel()
-			alice, server1, server2, deviceListUpdateChannel1, deviceListUpdateChannel2, room, cleanup := setupOutgoingDeviceListUpdateTest(t, deployment, "t25alice")
+			alice, server1, server2, deviceListUpdateChannel1, deviceListUpdateChannel2, room, cleanup := setupOutgoingDeviceListUpdateTest(t, deployment, "t33alice")
 			defer cleanup()
 
 			// The room starts with @charlie:server1 and @derek:server1 in it.
-			// @elsie:server2 joins the room before @t25alice:hs1.
+			// @elsie:server2 joins the room before @t33alice:hs1.
 			room.AddEvent(createJoinEvent(t, server2, room, server2.UserID("elsie")))
 
-			// @t25alice:hs1 joins the room.
+			// @t33alice:hs1 joins the room.
 			psjResult := beginPartialStateJoin(t, server1, room, alice)
 			defer psjResult.Destroy(t)
 
@@ -2309,16 +2309,16 @@ func TestPartialStateJoin(t *testing.T) {
 		// be in a room with partial state once the partial state join completes.
 		t.Run("Device list updates reach incorrectly kicked servers once partial state join completes", func(t *testing.T) {
 			t.Parallel()
-			alice, server1, server2, deviceListUpdateChannel1, deviceListUpdateChannel2, room, cleanup := setupOutgoingDeviceListUpdateTest(t, deployment, "t26alice")
+			alice, server1, server2, deviceListUpdateChannel1, deviceListUpdateChannel2, room, cleanup := setupOutgoingDeviceListUpdateTest(t, deployment, "t34alice")
 			defer cleanup()
 
 			// The room starts with @charlie:server1 and @derek:server1 in it.
-			// @t26alice:hs1 joins the room, followed by @elsie:server2.
+			// @t34alice:hs1 joins the room, followed by @elsie:server2.
 			// @elsie:server2 is kicked with an invalid event.
 			syncToken, psjResult := setupIncorrectlyAcceptedKick(t, deployment, alice, server1, server2, deviceListUpdateChannel1, deviceListUpdateChannel2, room)
 			defer psjResult.Destroy(t)
 
-			// @t26alice:hs1 sends out a device list update which is missed by @elsie:server2.
+			// @t34alice:hs1 sends out a device list update which is missed by @elsie:server2.
 			// @elsie:server2 must receive missed device list updates once the partial state join finishes.
 			testMissedDeviceListUpdateSentOncePartialJoinCompletes(t, deployment, alice,
 				server1, server2, deviceListUpdateChannel1, deviceListUpdateChannel2, room,
@@ -2331,17 +2331,17 @@ func TestPartialStateJoin(t *testing.T) {
 		// homeserver leaves the room beforehand.
 		t.Run("Device list updates reach incorrectly kicked servers once partial state join completes even though remote server left room", func(t *testing.T) {
 			t.Parallel()
-			alice, server1, server2, deviceListUpdateChannel1, deviceListUpdateChannel2, room, cleanup := setupOutgoingDeviceListUpdateTest(t, deployment, "t27alice")
+			alice, server1, server2, deviceListUpdateChannel1, deviceListUpdateChannel2, room, cleanup := setupOutgoingDeviceListUpdateTest(t, deployment, "t35alice")
 			defer cleanup()
 
 			// The room starts with @charlie:server1 and @derek:server1 in it.
-			// @t27alice:hs1 joins the room, followed by @elsie:server2.
+			// @t35alice:hs1 joins the room, followed by @elsie:server2.
 			// @elsie:server2 is kicked with an invalid event.
 			syncToken, psjResult := setupIncorrectlyAcceptedKick(t, deployment, alice, server1, server2, deviceListUpdateChannel1, deviceListUpdateChannel2, room)
 			defer psjResult.Destroy(t)
 
-			// @t27alice:hs1 sends out a device list update which is missed by @elsie:server2.
-			// @elsie:server2 joins another room shared with @t27alice:hs1 and leaves the partial state room.
+			// @t35alice:hs1 sends out a device list update which is missed by @elsie:server2.
+			// @elsie:server2 joins another room shared with @t35alice:hs1 and leaves the partial state room.
 			// @elsie:server2 must receive missed device list updates once the partial state join finishes.
 			testMissedDeviceListUpdateSentOncePartialJoinCompletes(t, deployment, alice,
 				server1, server2, deviceListUpdateChannel1, deviceListUpdateChannel2, room,
@@ -2362,18 +2362,18 @@ func TestPartialStateJoin(t *testing.T) {
 		t.Run("Device list updates reach incorrectly absent servers once partial state join completes", func(t *testing.T) {
 			t.Parallel()
 			alice, server1, server2, deviceListUpdateChannel1, deviceListUpdateChannel2, room, cleanup := setupOutgoingDeviceListUpdateTest(
-				t, deployment, "t28alice", handleSendJoinRequestsWithIncompleteServersInRoom,
+				t, deployment, "t36alice", handleSendJoinRequestsWithIncompleteServersInRoom,
 			)
 			defer cleanup()
 
 			// The room starts with @charlie:server1 and @derek:server1 in it.
-			// @elsie:server2 joins the room, followed by @t28alice:hs1.
+			// @elsie:server2 joins the room, followed by @t36alice:hs1.
 			// server1 does not tell hs1 that server2 is in the room.
 			room.AddEvent(createJoinEvent(t, server2, room, server2.UserID("elsie")))
 			psjResult := beginPartialStateJoin(t, server1, room, alice)
 			defer psjResult.Destroy(t)
 
-			// @t28alice:hs1 sends out a device list update which is missed by @elsie:server2.
+			// @t36alice:hs1 sends out a device list update which is missed by @elsie:server2.
 			// @elsie:server2 must receive missed device list updates once the partial state join finishes.
 			testMissedDeviceListUpdateSentOncePartialJoinCompletes(t, deployment, alice,
 				server1, server2, deviceListUpdateChannel1, deviceListUpdateChannel2, room,
@@ -2387,19 +2387,19 @@ func TestPartialStateJoin(t *testing.T) {
 		t.Run("Device list updates reach incorrectly absent servers once partial state join completes even though remote server left room", func(t *testing.T) {
 			t.Parallel()
 			alice, server1, server2, deviceListUpdateChannel1, deviceListUpdateChannel2, room, cleanup := setupOutgoingDeviceListUpdateTest(
-				t, deployment, "t29alice", handleSendJoinRequestsWithIncompleteServersInRoom,
+				t, deployment, "t37alice", handleSendJoinRequestsWithIncompleteServersInRoom,
 			)
 			defer cleanup()
 
 			// The room starts with @charlie:server1 and @derek:server1 in it.
-			// @elsie:server2 joins the room, followed by @t29alice:hs1.
+			// @elsie:server2 joins the room, followed by @t37alice:hs1.
 			// server1 does not tell hs1 that server2 is in the room.
 			room.AddEvent(createJoinEvent(t, server2, room, server2.UserID("elsie")))
 			psjResult := beginPartialStateJoin(t, server1, room, alice)
 			defer psjResult.Destroy(t)
 
-			// @t29alice:hs1 sends out a device list update which is missed by @elsie:server2.
-			// @elsie:server2 joins another room shared with @t29alice:hs1 and leaves the partial state room.
+			// @t37alice:hs1 sends out a device list update which is missed by @elsie:server2.
+			// @elsie:server2 joins another room shared with @t37alice:hs1 and leaves the partial state room.
 			// @elsie:server2 must receive missed device list updates once the partial state join finishes.
 			testMissedDeviceListUpdateSentOncePartialJoinCompletes(t, deployment, alice,
 				server1, server2, deviceListUpdateChannel1, deviceListUpdateChannel2, room,
@@ -2683,12 +2683,12 @@ func TestPartialStateJoin(t *testing.T) {
 		//    fully joined.
 		t.Run("Device list tracking for pre-existing members in partial state room", func(t *testing.T) {
 			t.Parallel()
-			alice, server, userDevicesChannel, room, sendDeviceListUpdate, cleanup := setupDeviceListCachingTest(t, deployment, "t30alice")
+			alice, server, userDevicesChannel, room, sendDeviceListUpdate, cleanup := setupDeviceListCachingTest(t, deployment, "t38alice")
 			defer cleanup()
 
 			// The room starts with @charlie and @derek in it.
 
-			// @t30alice:hs1 joins the room.
+			// @t38alice:hs1 joins the room.
 			psjResult := beginPartialStateJoin(t, server, room, alice)
 			defer psjResult.Destroy(t)
 
@@ -2699,13 +2699,13 @@ func TestPartialStateJoin(t *testing.T) {
 			mustQueryKeysWithFederationRequest(t, alice, userDevicesChannel, server.UserID("derek"))
 
 			// @charlie sends a message.
-			// Depending on the homeserver implementation, @t30alice:hs1 may be told that @charlie's devices are being tracked.
+			// Depending on the homeserver implementation, @t38alice:hs1 may be told that @charlie's devices are being tracked.
 			event := psjResult.CreateMessageEvent(t, "charlie", nil)
 			psjResult.Server.MustSendTransaction(t, deployment, "hs1", []json.RawMessage{event.JSON()}, nil)
 			syncToken := awaitEventViaSync(t, alice, psjResult.ServerRoom.RoomID, event.EventID(), "")
 
 			// @charlie updates their device list.
-			// Depending on the homeserver implementation, @t30alice:hs1 may or may not see the update,
+			// Depending on the homeserver implementation, @t38alice:hs1 may or may not see the update,
 			// independent of what they were told about the tracking of @charlie's device list earlier.
 			sendDeviceListUpdate("charlie")
 
@@ -2734,27 +2734,27 @@ func TestPartialStateJoin(t *testing.T) {
 		// another shared room and starts being tracked for real.
 		t.Run("Device list tracking when pre-existing members in partial state room join another shared room", func(t *testing.T) {
 			t.Parallel()
-			alice, server, _, room, sendDeviceListUpdate, cleanup := setupDeviceListCachingTest(t, deployment, "t31alice")
+			alice, server, _, room, sendDeviceListUpdate, cleanup := setupDeviceListCachingTest(t, deployment, "t39alice")
 			defer cleanup()
 
 			// The room starts with @charlie and @derek in it.
 
-			// @t31alice:hs1 joins the room.
+			// @t39alice:hs1 joins the room.
 			psjResult := beginPartialStateJoin(t, server, room, alice)
 			defer psjResult.Destroy(t)
 
 			// @charlie sends a message.
-			// Depending on the homeserver implementation, @t31alice:hs1 may be told that @charlie's devices are being tracked.
+			// Depending on the homeserver implementation, @t39alice:hs1 may be told that @charlie's devices are being tracked.
 			event := psjResult.CreateMessageEvent(t, "charlie", nil)
 			psjResult.Server.MustSendTransaction(t, deployment, "hs1", []json.RawMessage{event.JSON()}, nil)
 			syncToken := awaitEventViaSync(t, alice, psjResult.ServerRoom.RoomID, event.EventID(), "")
 
 			// @charlie updates their device list.
-			// Depending on the homeserver implementation, @t31alice:hs1 may or may not see the update,
+			// Depending on the homeserver implementation, @t39alice:hs1 may or may not see the update,
 			// independent of what they were told about the tracking of @charlie's device list earlier.
 			sendDeviceListUpdate("charlie")
 
-			// @alice:hs1 creates a public room.
+			// @t39alice:hs1 creates a public room.
 			otherRoomID := alice.CreateRoom(t, map[string]interface{}{"preset": "public_chat"})
 
 			// @charlie joins the room.
@@ -2768,7 +2768,7 @@ func TestPartialStateJoin(t *testing.T) {
 				client.SyncJoinedTo(server.UserID("charlie"), otherRoomID),
 			)
 
-			// Depending on the homeserver implementation, @t31alice:hs1 must have been told that either:
+			// Depending on the homeserver implementation, @t39alice:hs1 must have been told that either:
 			//  * charlie updated their device list, or
 			//  * charlie's device list is being tracked now, for real.
 			mustSyncUntilDeviceListsHas(t, alice, syncToken, "changed", server.UserID("charlie"))
@@ -2778,12 +2778,12 @@ func TestPartialStateJoin(t *testing.T) {
 		// It is expected that device list tracking works as normal for such users.
 		t.Run("Device list tracked for new members in partial state room", func(t *testing.T) {
 			t.Parallel()
-			alice, server, userDevicesChannel, room, sendDeviceListUpdate, cleanup := setupDeviceListCachingTest(t, deployment, "t32alice")
+			alice, server, userDevicesChannel, room, sendDeviceListUpdate, cleanup := setupDeviceListCachingTest(t, deployment, "t40alice")
 			defer cleanup()
 
 			// The room starts with @charlie and @derek in it.
 
-			// @t32alice:hs1 joins the room.
+			// @t40alice:hs1 joins the room.
 			psjResult := beginPartialStateJoin(t, server, room, alice)
 			defer psjResult.Destroy(t)
 
@@ -2806,7 +2806,7 @@ func TestPartialStateJoin(t *testing.T) {
 			mustQueryKeysWithoutFederationRequest(t, alice, userDevicesChannel, server.UserID("elsie"))
 
 			// @elsie updates their device list.
-			// @t32alice:hs1 ought to be notified.
+			// @t40alice:hs1 ought to be notified.
 			sendDeviceListUpdate("elsie")
 			mustSyncUntilDeviceListsHas(t, alice, syncToken, "changed", server.UserID("elsie"))
 			mustQueryKeysWithFederationRequest(t, alice, userDevicesChannel, server.UserID("elsie"))
@@ -2828,12 +2828,12 @@ func TestPartialStateJoin(t *testing.T) {
 		// completes.
 		t.Run("Device list no longer tracked when new member leaves partial state room", func(t *testing.T) {
 			t.Parallel()
-			alice, server, userDevicesChannel, room, _, cleanup := setupDeviceListCachingTest(t, deployment, "t33alice")
+			alice, server, userDevicesChannel, room, _, cleanup := setupDeviceListCachingTest(t, deployment, "t41alice")
 			defer cleanup()
 
 			// The room starts with @charlie and @derek in it.
 
-			// @t33alice:hs1 joins the room.
+			// @t41alice:hs1 joins the room.
 			psjResult := beginPartialStateJoin(t, server, room, alice)
 			defer psjResult.Destroy(t)
 
@@ -2874,12 +2874,12 @@ func TestPartialStateJoin(t *testing.T) {
 			t.Skip("Cannot yet leave a room during resync")
 			t.Parallel()
 
-			alice, server, userDevicesChannel, room, _, cleanup := setupDeviceListCachingTest(t, deployment, "t34alice")
+			alice, server, userDevicesChannel, room, _, cleanup := setupDeviceListCachingTest(t, deployment, "t42alice")
 			defer cleanup()
 
 			// The room starts with @charlie and @derek in it.
 
-			// @t34alice:hs1 joins the room.
+			// @t42alice:hs1 joins the room.
 			psjResult := beginPartialStateJoin(t, server, room, alice)
 			defer psjResult.Destroy(t)
 
@@ -2917,12 +2917,12 @@ func TestPartialStateJoin(t *testing.T) {
 			t.Skip("Cannot yet abort a partial state join")
 			t.Parallel()
 
-			alice, server, userDevicesChannel, room, _, cleanup := setupDeviceListCachingTest(t, deployment, "t35alice")
+			alice, server, userDevicesChannel, room, _, cleanup := setupDeviceListCachingTest(t, deployment, "t43alice")
 			defer cleanup()
 
 			// The room starts with @charlie and @derek in it.
 
-			// @t35alice:hs1 joins the room.
+			// @t43alice:hs1 joins the room.
 			psjResult := beginPartialStateJoin(t, server, room, alice)
 			defer psjResult.Destroy(t)
 
@@ -3053,12 +3053,12 @@ func TestPartialStateJoin(t *testing.T) {
 		// in a room once a partial state join completes.
 		t.Run("Device list no longer tracked for user incorrectly believed to be in room", func(t *testing.T) {
 			t.Parallel()
-			alice, server, userDevicesChannel, room, _, cleanup := setupDeviceListCachingTest(t, deployment, "t36alice")
+			alice, server, userDevicesChannel, room, _, cleanup := setupDeviceListCachingTest(t, deployment, "t44alice")
 			defer cleanup()
 
 			// The room starts with @charlie and @derek in it.
 			// @charlie leaves the room.
-			// @t36alice:hs1 joins the room.
+			// @t44alice:hs1 joins the room.
 			// @elsie joins the room.
 			// @charlie "kicks" @derek, which the homeserver under test incorrectly accepts.
 			// @derek kicks @elsie, which the homeserver under test incorrectly rejects.
@@ -3088,12 +3088,12 @@ func TestPartialStateJoin(t *testing.T) {
 			t.Skip("This edge case is being ignored for now.")
 			t.Parallel()
 
-			alice, server, userDevicesChannel, room, _, cleanup := setupDeviceListCachingTest(t, deployment, "t37alice")
+			alice, server, userDevicesChannel, room, _, cleanup := setupDeviceListCachingTest(t, deployment, "t45alice")
 			defer cleanup()
 
 			// The room starts with @charlie and @derek in it.
 			// @charlie leaves the room.
-			// @t37alice:hs1 joins the room.
+			// @t45alice:hs1 joins the room.
 			// @elsie joins the room.
 			// @charlie "kicks" @derek, which the homeserver under test incorrectly accepts.
 			// @derek kicks @elsie, which the homeserver under test incorrectly rejects.
@@ -3131,12 +3131,12 @@ func TestPartialStateJoin(t *testing.T) {
 		// device list cache.
 		t.Run("Device list tracking for user incorrectly believed to be in room when they rejoin after partial state join completes", func(t *testing.T) {
 			t.Parallel()
-			alice, server, userDevicesChannel, room, _, cleanup := setupDeviceListCachingTest(t, deployment, "t38alice")
+			alice, server, userDevicesChannel, room, _, cleanup := setupDeviceListCachingTest(t, deployment, "t46alice")
 			defer cleanup()
 
 			// The room starts with @charlie and @derek in it.
 			// @charlie leaves the room.
-			// @t38alice:hs1 joins the room.
+			// @t46alice:hs1 joins the room.
 			// @elsie joins the room.
 			// @charlie "kicks" @derek, which the homeserver under test incorrectly accepts.
 			// @derek kicks @elsie, which the homeserver under test incorrectly rejects.
@@ -3172,12 +3172,12 @@ func TestPartialStateJoin(t *testing.T) {
 			t.Skip("This edge case is being ignored for now.")
 			t.Parallel()
 
-			alice, server, userDevicesChannel, room, _, cleanup := setupDeviceListCachingTest(t, deployment, "t39alice")
+			alice, server, userDevicesChannel, room, _, cleanup := setupDeviceListCachingTest(t, deployment, "t47alice")
 			defer cleanup()
 
 			// The room starts with @charlie and @derek in it.
 			// @charlie leaves the room.
-			// @t39alice:hs1 joins the room.
+			// @t47alice:hs1 joins the room.
 			// @elsie joins the room.
 			// @charlie "kicks" @derek, which the homeserver under test incorrectly accepts.
 			// @derek kicks @elsie, which the homeserver under test incorrectly rejects.
@@ -3189,7 +3189,7 @@ func TestPartialStateJoin(t *testing.T) {
 			mustQueryKeysWithFederationRequest(t, alice, userDevicesChannel, server.UserID("elsie"))
 			mustQueryKeysWithoutFederationRequest(t, alice, userDevicesChannel, server.UserID("elsie"))
 
-			// @t39alice:hs1 creates a public room.
+			// @t47alice:hs1 creates a public room.
 			otherRoomID := alice.CreateRoom(t, map[string]interface{}{"preset": "public_chat"})
 
 			// @elsie joins the room.
