@@ -20,62 +20,72 @@ var (
 	msc3787JoinRule    = "knock_restricted"
 )
 
-// See TestKnocking
-func TestKnockingInMSC3787Room(t *testing.T) {
-	doTestKnocking(t, msc3787RoomVersion, msc3787JoinRule)
-}
+func TestMSC3787(t *testing.T) {
+	t.Run("KnockingInMSC3787Room", func(t *testing.T) {
+		//t.Parallel()
+		//TestKnockingInMSC3787Room
+		// See TestKnocking
+		doTestKnocking(t, msc3787RoomVersion, msc3787JoinRule)
+	})
+	t.Run("KnockRoomsInPublicRoomsDirectoryInMSC3787Room", func(t *testing.T) {
+		//t.Parallel()
+		// See TestKnockRoomsInPublicRoomsDirectory
+		// TestKnockRoomsInPublicRoomsDirectoryInMSC3787Room
+		doTestKnockRoomsInPublicRoomsDirectory(t, msc3787RoomVersion, msc3787JoinRule)
+	})
+	t.Run("CannotSendKnockViaSendKnockInMSC3787Room", func(t *testing.T) {
+		//t.Parallel()
+		// See TestCannotSendKnockViaSendKnock
+		// TestCannotSendKnockViaSendKnockInMSC3787Room
+		testValidationForSendMembershipEndpoint(t, "/_matrix/federation/v1/send_knock", "knock",
+			map[string]interface{}{
+				"preset":       "public_chat",
+				"room_version": msc3787RoomVersion,
+			},
+		)
+	})
+	t.Run("RestrictedRoomsLocalJoinInMSC3787Room", func(t *testing.T) {
+		t.Parallel()
+		// See TestRestrictedRoomsLocalJoin
+		// TestRestrictedRoomsLocalJoinInMSC3787Room
+		deployment := Deploy(t, b.BlueprintOneToOneRoom)
+		defer deployment.Destroy(t)
 
-// See TestKnockRoomsInPublicRoomsDirectory
-func TestKnockRoomsInPublicRoomsDirectoryInMSC3787Room(t *testing.T) {
-	doTestKnockRoomsInPublicRoomsDirectory(t, msc3787RoomVersion, msc3787JoinRule)
-}
+		// Setup the user, allowed room, and restricted room.
+		alice, allowed_room, room := setupRestrictedRoom(t, deployment, msc3787RoomVersion, msc3787JoinRule)
 
-// See TestCannotSendKnockViaSendKnock
-func TestCannotSendKnockViaSendKnockInMSC3787Room(t *testing.T) {
-	testValidationForSendMembershipEndpoint(t, "/_matrix/federation/v1/send_knock", "knock",
-		map[string]interface{}{
-			"preset":       "public_chat",
-			"room_version": msc3787RoomVersion,
-		},
-	)
-}
+		// Create a second user on the same homeserver.
+		bob := deployment.Client(t, "hs1", "@bob:hs1")
 
-// See TestRestrictedRoomsLocalJoin
-func TestRestrictedRoomsLocalJoinInMSC3787Room(t *testing.T) {
-	deployment := Deploy(t, b.BlueprintOneToOneRoom)
-	defer deployment.Destroy(t)
+		// Execute the checks.
+		checkRestrictedRoom(t, alice, bob, allowed_room, room, msc3787JoinRule)
+	})
+	t.Run("RestrictedRoomsRemoteJoinInMSC3787Room", func(t *testing.T) {
+		t.Parallel()
+		// See TestRestrictedRoomsRemoteJoin
+		// TestRestrictedRoomsRemoteJoinInMSC3787Room
+		deployment := Deploy(t, b.BlueprintFederationOneToOneRoom)
+		defer deployment.Destroy(t)
 
-	// Setup the user, allowed room, and restricted room.
-	alice, allowed_room, room := setupRestrictedRoom(t, deployment, msc3787RoomVersion, msc3787JoinRule)
+		// Setup the user, allowed room, and restricted room.
+		alice, allowed_room, room := setupRestrictedRoom(t, deployment, msc3787RoomVersion, msc3787JoinRule)
 
-	// Create a second user on the same homeserver.
-	bob := deployment.Client(t, "hs1", "@bob:hs1")
+		// Create a second user on a different homeserver.
+		bob := deployment.Client(t, "hs2", "@bob:hs2")
 
-	// Execute the checks.
-	checkRestrictedRoom(t, alice, bob, allowed_room, room, msc3787JoinRule)
-}
-
-// See TestRestrictedRoomsRemoteJoin
-func TestRestrictedRoomsRemoteJoinInMSC3787Room(t *testing.T) {
-	deployment := Deploy(t, b.BlueprintFederationOneToOneRoom)
-	defer deployment.Destroy(t)
-
-	// Setup the user, allowed room, and restricted room.
-	alice, allowed_room, room := setupRestrictedRoom(t, deployment, msc3787RoomVersion, msc3787JoinRule)
-
-	// Create a second user on a different homeserver.
-	bob := deployment.Client(t, "hs2", "@bob:hs2")
-
-	// Execute the checks.
-	checkRestrictedRoom(t, alice, bob, allowed_room, room, msc3787JoinRule)
-}
-
-// See TestRestrictedRoomsRemoteJoinLocalUser
-func TestRestrictedRoomsRemoteJoinLocalUserInMSC3787Room(t *testing.T) {
-	doTestRestrictedRoomsRemoteJoinLocalUser(t, msc3787RoomVersion, msc3787JoinRule)
-}
-
-// See TestRestrictedRoomsRemoteJoinFailOver
-func TestRestrictedRoomsRemoteJoinFailOverInMSC3787Room(t *testing.T) {
-	doTestRestrictedRoomsRemoteJoinFailOver(t, msc3787RoomVersion, msc3787JoinRule)
+		// Execute the checks.
+		checkRestrictedRoom(t, alice, bob, allowed_room, room, msc3787JoinRule)
+	})
+	t.Run("RestrictedRoomsRemoteJoinLocalUserInMSC3787Room", func(t *testing.T) {
+		t.Parallel()
+		// See TestRestrictedRoomsRemoteJoinLocalUser
+		// TestRestrictedRoomsRemoteJoinLocalUserInMSC3787Room
+		doTestRestrictedRoomsRemoteJoinLocalUser(t, msc3787RoomVersion, msc3787JoinRule)
+	})
+	t.Run("RestrictedRoomsRemoteJoinFailOverInMSC3787Room", func(t *testing.T) {
+		t.Parallel()
+		// See TestRestrictedRoomsRemoteJoinFailOver
+		// TestRestrictedRoomsRemoteJoinFailOverInMSC3787Room
+		doTestRestrictedRoomsRemoteJoinFailOver(t, msc3787RoomVersion, msc3787JoinRule)
+	})
 }
