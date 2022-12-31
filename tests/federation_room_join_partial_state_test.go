@@ -122,7 +122,7 @@ func TestPartialStateJoin(t *testing.T) {
 		// test that a partial-state join continues syncing state after a restart
 		// the same as SyncBlocksDuringPartialStateJoin, with a restart in the middle
 		t.Run("PartialStateJoinContinuesAfterRestart", func(t *testing.T) {
-			t.Parallel()
+			//t.Parallel()
 			deployment := Deploy(t, b.BlueprintAlice)
 			defer deployment.Destroy(t)
 
@@ -184,7 +184,7 @@ func TestPartialStateJoin(t *testing.T) {
 		// test that a partial-state join can fall back to other homeservers when re-syncing
 		// partial state.
 		t.Run("PartialStateJoinSyncsUsingOtherHomeservers", func(t *testing.T) {
-			t.Parallel()
+			//t.Parallel()
 			// set up 3 homeservers: hs1, hs2 and complement
 			deployment := Deploy(t, b.BlueprintFederationTwoLocalOneRemote)
 			defer deployment.Destroy(t)
