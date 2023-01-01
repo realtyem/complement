@@ -348,12 +348,6 @@ func doTestRestrictedRoomsRemoteJoinLocalUser(t *testing.T, roomVersion string, 
 // * hs2 joins the room
 // * hs3 attempts to join via hs2 (should fail) and hs1 (should work)
 func TestRestrictedRoomsRemoteJoinFailOver(t *testing.T) {
-	doTestRestrictedRoomsRemoteJoinFailOver(t, "8", "restricted")
-}
-
-func doTestRestrictedRoomsRemoteJoinFailOver(t *testing.T, roomVersion string, joinRule string) {
-	runtime.SkipIf(t, runtime.Dendrite) // FIXME: https://github.com/matrix-org/dendrite/issues/2801
-
 	deployment := Deploy(t, b.Blueprint{
 		Name: "federation_three_homeservers",
 		Homeservers: []b.Homeserver{
@@ -387,6 +381,13 @@ func doTestRestrictedRoomsRemoteJoinFailOver(t *testing.T, roomVersion string, j
 		},
 	})
 	defer deployment.Destroy(t)
+
+
+	doTestRestrictedRoomsRemoteJoinFailOver(t, "8", "restricted", deployment)
+}
+
+func doTestRestrictedRoomsRemoteJoinFailOver(t *testing.T, roomVersion string, joinRule string, deployment *docker.Deployment) {
+	runtime.SkipIf(t, runtime.Dendrite) // FIXME: https://github.com/matrix-org/dendrite/issues/2801
 
 	// Setup the user, allowed room, and restricted room.
 	alice, allowed_room, room := setupRestrictedRoom(t, deployment, roomVersion, joinRule)
