@@ -49,7 +49,7 @@ func TestMSC3787(t *testing.T) {
 		// with users: alice:hs1, bob:hs1, charlie:hs2
 
 		t.Run("CannotSendKnockViaSendKnockInMSC3787Room", func(t *testing.T) {
-			t.Parallel()
+			ParallelIfNotGithub(t)
 			// See TestCannotSendKnockViaSendKnock(in federation_room_join_test.go)
 			// TestCannotSendKnockViaSendKnockInMSC3787Room
 			// with users: alice and fake user charlie
@@ -62,7 +62,7 @@ func TestMSC3787(t *testing.T) {
 			)
 		})
 		t.Run("KnockingInMSC3787Room", func(t *testing.T) {
-			t.Parallel()
+			ParallelIfNotGithub(t)
 			// TestKnockingInMSC3787Room
 			// See TestKnocking(in knocking_test.go)
 			// with users: alice, bob, charlie and fake user david
@@ -126,7 +126,7 @@ func TestMSC3787(t *testing.T) {
 
 		})
 		t.Run("KnockRoomsInPublicRoomsDirectoryInMSC3787Room", func(t *testing.T) {
-			t.Parallel()
+			ParallelIfNotGithub(t)
 			// See TestKnockRoomsInPublicRoomsDirectory(in knocking_test.go)
 			// TestKnockRoomsInPublicRoomsDirectoryInMSC3787Room
 			// with users: alice
@@ -139,7 +139,7 @@ func TestMSC3787(t *testing.T) {
 			//doTestRestrictedRoomsRemoteJoinLocalUser(t, msc3787RoomVersion, msc3787JoinRule)
 
 			runtime.SkipIf(t, runtime.Dendrite) // FIXME: https://github.com/matrix-org/dendrite/issues/2801
-			t.Parallel()
+			ParallelIfNotGithub(t)
 			roomVersion := msc3787RoomVersion
 			joinRule := msc3787JoinRule
 
@@ -254,7 +254,7 @@ func TestMSC3787(t *testing.T) {
 
 		})
 		t.Run("RestrictedRoomsLocalJoinInMSC3787Room", func(t *testing.T) {
-			t.Parallel()
+			ParallelIfNotGithub(t)
 			// See TestRestrictedRoomsLocalJoin
 			// TestRestrictedRoomsLocalJoinInMSC3787Room
 
@@ -268,7 +268,7 @@ func TestMSC3787(t *testing.T) {
 			checkRestrictedRoom(t, alice, bob, allowed_room, room, msc3787JoinRule)
 		})
 		t.Run("RestrictedRoomsRemoteJoinInMSC3787Room", func(t *testing.T) {
-			t.Parallel()
+			ParallelIfNotGithub(t)
 			// See TestRestrictedRoomsRemoteJoin
 			// TestRestrictedRoomsRemoteJoinInMSC3787Room
 

@@ -121,3 +121,11 @@ func (w *Waiter) Finish() {
 	w.closed = true
 	close(w.ch)
 }
+
+// If this is Github, it's to the benefit of time to run tests sequentially(generally speaking)
+func ParallelIfNotGithub(t *testing.T) {
+	t.Helper()
+	if os.Getenv("GITHUB_WORKFLOW") == "" {
+		t.Parallel()
+	}
+}
