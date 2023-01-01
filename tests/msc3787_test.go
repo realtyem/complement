@@ -30,17 +30,26 @@ var (
 )
 
 func TestMSC3787(t *testing.T) {
-	t.Run("Subgroup 1", func(t *testing.T) {
-		// uses BlueprintAlice
-		t.Run("KnockRoomsInPublicRoomsDirectoryInMSC3787Room", func(t *testing.T) {
-			//t.Parallel()
-			// See TestKnockRoomsInPublicRoomsDirectory(in knocking_test.go)
-			// TestKnockRoomsInPublicRoomsDirectoryInMSC3787Room
-			// with users: alice
-			doTestKnockRoomsInPublicRoomsDirectory(t, msc3787RoomVersion, msc3787JoinRule)
-		})
+	//deployment := Deploy(t, b.BlueprintFederationTwoLocalOneRemote)
+	// fed_2L1R has:
+	//  alice:hs1
+	//  bob:hs1
+	//  charlie:hs2
+	// fed_3hs has:
+	//  alice:hs1   bob:hs1
+	//  charlie:hs2 elise:hs2
+	//  george:hs3  helen:hs3
+	// server has:
+	//  david
+	deployment := Deploy(t, b.BlueprintThreeHomeserversTwoUsersEach)
+	defer deployment.Destroy(t)
+
+	t.Run("parallel", func(t *testing.T) {
+		// uses BlueprintFederationTwoLocalOneRemote
+		// with users: alice:hs1, bob:hs1, charlie:hs2
+
 		t.Run("CannotSendKnockViaSendKnockInMSC3787Room", func(t *testing.T) {
-			//t.Parallel()
+			t.Parallel()
 			// See TestCannotSendKnockViaSendKnock(in federation_room_join_test.go)
 			// TestCannotSendKnockViaSendKnockInMSC3787Room
 			// with users: alice and fake user charlie
@@ -49,34 +58,25 @@ func TestMSC3787(t *testing.T) {
 					"preset":       "public_chat",
 					"room_version": msc3787RoomVersion,
 				},
+				deployment,
 			)
 		})
-	})
-	t.Run("Subgroup 2", func(t *testing.T) {
-		// uses BlueprintFederationTwoLocalOneRemote
-		// with users: alice:hs1, bob:hs1, charlie:hs2
-		deployment := Deploy(t, b.BlueprintFederationTwoLocalOneRemote)
-		defer deployment.Destroy(t)
-
-		// Create a client for one local user
-		aliceUserID := "@alice:hs1"
-		alice := deployment.Client(t, "hs1", aliceUserID)
-
-		// Create a client for another local user
-		bobUserID := "@bob:hs1"
-		bob := deployment.Client(t, "hs1", bobUserID)
-
-		// Create a client for a remote user
-		charlieUserID := "@charlie:hs2"
-		charlie := deployment.Client(t, "hs2", charlieUserID)
-
 		t.Run("KnockingInMSC3787Room", func(t *testing.T) {
+			t.Parallel()
 			// TestKnockingInMSC3787Room
 			// See TestKnocking(in knocking_test.go)
-			// with users: alice, bob, charlie and fake user derek
+			// with users: alice, bob, charlie and fake user david
 			//doTestKnocking(t, msc3787RoomVersion, msc3787JoinRule)
 			roomVersion := msc3787RoomVersion
 			joinRule := msc3787JoinRule
+			// Create a client for one local user
+			alice := deployment.Client(t, "hs1", "@alice:hs1")
+
+			// Create a client for another local user
+			bob := deployment.Client(t, "hs1", "@bob:hs1")
+
+			// Create a client for a remote user
+			charlie := deployment.Client(t, "hs2", "@charlie:hs2")
 
 			// Create a server to observe
 			inviteWaiter := NewWaiter()
@@ -125,6 +125,13 @@ func TestMSC3787(t *testing.T) {
 
 
 		})
+		t.Run("KnockRoomsInPublicRoomsDirectoryInMSC3787Room", func(t *testing.T) {
+			//t.Parallel()
+			// See TestKnockRoomsInPublicRoomsDirectory(in knocking_test.go)
+			// TestKnockRoomsInPublicRoomsDirectoryInMSC3787Room
+			// with users: alice
+			doTestKnockRoomsInPublicRoomsDirectory(t, msc3787RoomVersion, msc3787JoinRule, deployment)
+		})
 		t.Run("RestrictedRoomsRemoteJoinLocalUserInMSC3787Room", func(t *testing.T) {
 			// TestRestrictedRoomsRemoteJoinLocalUserInMSC3787Room
 			// See TestRestrictedRoomsRemoteJoinLocalUser(in restricted_rooms_test.go)
@@ -132,6 +139,7 @@ func TestMSC3787(t *testing.T) {
 			//doTestRestrictedRoomsRemoteJoinLocalUser(t, msc3787RoomVersion, msc3787JoinRule)
 
 			runtime.SkipIf(t, runtime.Dendrite) // FIXME: https://github.com/matrix-org/dendrite/issues/2801
+			t.Parallel()
 			roomVersion := msc3787RoomVersion
 			joinRule := msc3787JoinRule
 
@@ -139,7 +147,7 @@ func TestMSC3787(t *testing.T) {
 			//
 			// This is the room which membership checks are delegated to. In practice,
 			// this will often be an MSC1772 space, but that is not required.
-			// charlie := deployment.Client(t, "hs2", "@charlie:hs2")
+			charlie := deployment.Client(t, "hs2", "@charlie:hs2")
 			allowed_room := charlie.CreateRoom(t, map[string]interface{}{
 				"preset": "public_chat",
 				"name":   "Space",
@@ -168,12 +176,12 @@ func TestMSC3787(t *testing.T) {
 			})
 
 			// Invite alice manually and accept it.
-			//alice := deployment.Client(t, "hs1", "@alice:hs1")
+			alice := deployment.Client(t, "hs1", "@alice:hs1")
 			charlie.InviteRoom(t, room, alice.UserID)
 			alice.JoinRoom(t, room, []string{"hs2"})
 
 			// Confirm that Alice cannot issue invites (due to the default power levels).
-			//bob := deployment.Client(t, "hs1", "@bob:hs1")
+			bob := deployment.Client(t, "hs1", "@bob:hs1")
 			body := map[string]interface{}{
 				"user_id": bob.UserID,
 			}
@@ -246,31 +254,29 @@ func TestMSC3787(t *testing.T) {
 
 		})
 		t.Run("RestrictedRoomsLocalJoinInMSC3787Room", func(t *testing.T) {
+			t.Parallel()
 			// See TestRestrictedRoomsLocalJoin
 			// TestRestrictedRoomsLocalJoinInMSC3787Room
-			//deployment := Deploy(t, b.BlueprintOneToOneRoom)
-			//defer deployment.Destroy(t)
 
 			// Setup the user, allowed room, and restricted room.
-			_, allowed_room, room := setupRestrictedRoom(t, deployment, msc3787RoomVersion, msc3787JoinRule)
+			alice, allowed_room, room := setupRestrictedRoom(t, deployment, msc3787RoomVersion, msc3787JoinRule)
 
 			// Create a second user on the same homeserver.
-			//bob := deployment.Client(t, "hs1", "@bob:hs1")
+			bob := deployment.Client(t, "hs1", "@bob:hs1")
 
 			// Execute the checks.
 			checkRestrictedRoom(t, alice, bob, allowed_room, room, msc3787JoinRule)
 		})
 		t.Run("RestrictedRoomsRemoteJoinInMSC3787Room", func(t *testing.T) {
+			t.Parallel()
 			// See TestRestrictedRoomsRemoteJoin
 			// TestRestrictedRoomsRemoteJoinInMSC3787Room
-			//deployment := Deploy(t, b.BlueprintFederationOneToOneRoom)
-			//defer deployment.Destroy(t)
 
 			// Setup the user, allowed room, and restricted room.
-			_, allowed_room, room := setupRestrictedRoom(t, deployment, msc3787RoomVersion, msc3787JoinRule)
+			alice, allowed_room, room := setupRestrictedRoom(t, deployment, msc3787RoomVersion, msc3787JoinRule)
 
 			// Create a second user on a different homeserver.
-			//charlie := deployment.Client(t, "hs2", "@charlie:hs2")
+			charlie := deployment.Client(t, "hs2", "@charlie:hs2")
 
 			// Execute the checks.
 			checkRestrictedRoom(t, alice, charlie, allowed_room, room, msc3787JoinRule)
@@ -278,9 +284,116 @@ func TestMSC3787(t *testing.T) {
 	})
 	t.Run("RestrictedRoomsRemoteJoinFailOverInMSC3787Room", func(t *testing.T) {
 		// See TestRestrictedRoomsRemoteJoinFailOver
+		//doTestRestrictedRoomsRemoteJoinFailOver(t, msc3787RoomVersion, msc3787JoinRule)
 		// TestRestrictedRoomsRemoteJoinFailOverInMSC3787Room
 		// uses custom Blueprint with 3 homeservers
 		// with users: alice:hs1, bob:hs2, charlie:hs3
-		doTestRestrictedRoomsRemoteJoinFailOver(t, msc3787RoomVersion, msc3787JoinRule)
+
+		//  alice:hs1   bob:hs1
+		//  charlie:hs2 elise:hs2
+		//  george:hs3  helen:hs3
+
+		runtime.SkipIf(t, runtime.Dendrite) // FIXME: https://github.com/matrix-org/dendrite/issues/2801
+		roomVersion := msc3787RoomVersion
+		joinRule := msc3787JoinRule
+
+		// Setup the user, allowed room, and restricted room.
+		alice, allowed_room, room := setupRestrictedRoom(t, deployment, roomVersion, joinRule)
+
+		// Raise the power level so that only alice can invite.
+		state_key := ""
+		alice.SendEventSynced(t, room, b.Event{
+			Type:     "m.room.power_levels",
+			StateKey: &state_key,
+			Content: map[string]interface{}{
+				"invite": 100,
+				"users": map[string]interface{}{
+					alice.UserID: 100,
+				},
+			},
+		})
+
+		// Create a second user on a different homeserver.
+		charlie := deployment.Client(t, "hs2", "@charlie:hs2")
+
+		// Charlie joins the room and allowed room.
+		charlie.JoinRoom(t, allowed_room, []string{"hs1"})
+		charlie.JoinRoom(t, room, []string{"hs1"})
+
+		// George should join the allowed room (which gives access to the room).
+		george := deployment.Client(t, "hs3", "@george:hs3")
+		george.JoinRoom(t, allowed_room, []string{"hs1"})
+
+		// hs2 doesn't have anyone to invite from, so the join fails.
+		failJoinRoom(t, george, room, "hs2")
+
+		// Including hs1 (and failing over to it) allows the join to succeed.
+		george.JoinRoom(t, room, []string{"hs2", "hs1"})
+
+		// Double check that the join was authorised via hs1.
+		charlie.MustSyncUntil(t, client.SyncReq{}, client.SyncTimelineHas(
+			room,
+			func(ev gjson.Result) bool {
+				if ev.Get("type").Str != "m.room.member" || ev.Get("state_key").Str != george.UserID {
+					return false
+				}
+				must.EqualStr(t, ev.Get("content").Get("membership").Str, "join", "George failed to join the room")
+				must.EqualStr(t, ev.Get("content").Get("join_authorised_via_users_server").Str, alice.UserID, "Join authorised via incorrect server")
+
+				return true
+			},
+		))
+
+		// Bump the power-level of charlie.
+		alice.SendEventSynced(t, room, b.Event{
+			Type:     "m.room.power_levels",
+			StateKey: &state_key,
+			Content: map[string]interface{}{
+				"invite": 100,
+				"users": map[string]interface{}{
+					alice.UserID: 100,
+					charlie.UserID:   100,
+				},
+			},
+		})
+
+		// George leaves the room (so they can rejoin).
+		george.LeaveRoom(t, room)
+
+		// Ensure the events have synced to hs2.
+		charlie.MustSyncUntil(t, client.SyncReq{}, client.SyncTimelineHas(
+			room,
+			func(ev gjson.Result) bool {
+				if ev.Get("type").Str != "m.room.member" || ev.Get("state_key").Str != george.UserID {
+					return false
+				}
+				return ev.Get("content").Get("membership").Str == "leave"
+			},
+		))
+
+		// Charlie leaves the allowed room so that hs2 doesn't know if George is in the
+		// allowed room or not.
+		charlie.LeaveRoom(t, allowed_room)
+
+		// hs2 cannot complete the join since they do not know if George meets the
+		// requirements (since it is no longer in the allowed room).
+		failJoinRoom(t, george, room, "hs2")
+
+		// Including hs1 (and failing over to it) allows the join to succeed.
+		george.JoinRoom(t, room, []string{"hs2", "hs1"})
+
+		// Double check that the join was authorised via hs1.
+		charlie.MustSyncUntil(t, client.SyncReq{}, client.SyncTimelineHas(
+			room,
+			func(ev gjson.Result) bool {
+				if ev.Get("type").Str != "m.room.member" || ev.Get("state_key").Str != george.UserID {
+					return false
+				}
+				must.EqualStr(t, ev.Get("content").Get("membership").Str, "join", "George failed to join the room")
+				must.EqualStr(t, ev.Get("content").Get("join_authorised_via_users_server").Str, alice.UserID, "Join authorised via incorrect server")
+
+				return true
+			},
+		))
 	})
 }
