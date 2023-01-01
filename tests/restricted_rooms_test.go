@@ -16,6 +16,58 @@ import (
 	"github.com/matrix-org/complement/runtime"
 )
 
+func TestRestrictedRooms(t *testing.T) {
+	deployment := Deploy(t, b.BlueprintFederationThreeHomeserversTwoUsersEach)
+	defer deployment.Destroy(t)
+
+	t.Run("parallel", func(t *testing.T) {
+		t.Run("LocalJoin", func(t *testing.T) {
+			t.Parallel()
+			// Test joining a room with join rules restricted to membership in another room.
+			// users needed: @alice:hs1, @bob:hs1
+			// Setup the user, allowed room, and restricted room.
+			alice, allowed_room, room := setupRestrictedRoom(t, deployment, "8", "restricted")
+
+			// Create a second user on the same homeserver.
+			bob := deployment.Client(t, "hs1", "@bob:hs1")
+
+			// Execute the checks.
+			checkRestrictedRoom(t, alice, bob, allowed_room, room, "restricted")
+		})
+		t.Run("RemoteJoin", func(t *testing.T) {
+			t.Parallel()
+			// Test joining a room with join rules restricted to membership in another room.
+			// users needed: @alice:hs1, @charlie:hs2(originally was @bob:hs2)
+			// Setup the user, allowed room, and restricted room.
+			alice, allowed_room, room := setupRestrictedRoom(t, deployment, "8", "restricted")
+
+			// Create a second user on a different homeserver.
+			charlie := deployment.Client(t, "hs2", "@charlie:hs2")
+
+			// Execute the checks.
+			checkRestrictedRoom(t, alice, charlie, allowed_room, room, "restricted")
+		})
+		t.Run("RemoteJoinLocalUser", func(t *testing.T) {
+			t.Parallel()
+			// A server will do a remote join for a local user if it is unable to issue
+			// joins in a restricted room it is already participating in.
+			// users needed: @alice:hs1, @bob:hs1, @charlie:hs2
+			doTestRestrictedRoomsRemoteJoinLocalUser(t, "8", "restricted", deployment)
+		})
+		t.Run("RemoteJoinFailOver", func(t *testing.T) {
+			t.Parallel()
+			// A server will request a failover if asked to /make_join and it does not have
+			// the appropriate authorisation to complete the request.
+			//
+			// Setup 3 homeservers(use BlueprintFederationThreeHomeserversTwoUsersEach):
+			// * hs1 creates the allowed room/room.
+			// * hs2 joins the room
+			// * hs3 attempts to join via hs2 (should fail) and hs1 (should work)
+			doTestRestrictedRoomsRemoteJoinFailOver(t, "8", "restricted", deployment)
+		})
+	})
+}
+
 func failJoinRoom(t *testing.T, c *client.CSAPI, roomIDOrAlias string, serverName string) {
 	t.Helper()
 
@@ -188,45 +240,6 @@ func checkRestrictedRoom(t *testing.T, alice *client.CSAPI, bob *client.CSAPI, a
 	})
 }
 
-// Test joining a room with join rules restricted to membership in another room.
-func TestRestrictedRoomsLocalJoin(t *testing.T) {
-	deployment := Deploy(t, b.BlueprintOneToOneRoom)
-	defer deployment.Destroy(t)
-
-	// Setup the user, allowed room, and restricted room.
-	alice, allowed_room, room := setupRestrictedRoom(t, deployment, "8", "restricted")
-
-	// Create a second user on the same homeserver.
-	bob := deployment.Client(t, "hs1", "@bob:hs1")
-
-	// Execute the checks.
-	checkRestrictedRoom(t, alice, bob, allowed_room, room, "restricted")
-}
-
-// Test joining a room with join rules restricted to membership in another room.
-func TestRestrictedRoomsRemoteJoin(t *testing.T) {
-	deployment := Deploy(t, b.BlueprintFederationOneToOneRoom)
-	defer deployment.Destroy(t)
-
-	// Setup the user, allowed room, and restricted room.
-	alice, allowed_room, room := setupRestrictedRoom(t, deployment, "8", "restricted")
-
-	// Create a second user on a different homeserver.
-	bob := deployment.Client(t, "hs2", "@bob:hs2")
-
-	// Execute the checks.
-	checkRestrictedRoom(t, alice, bob, allowed_room, room, "restricted")
-}
-
-// A server will do a remote join for a local user if it is unable to to issue
-// joins in a restricted room it is already participating in.
-func TestRestrictedRoomsRemoteJoinLocalUser(t *testing.T) {
-	deployment := Deploy(t, b.BlueprintFederationTwoLocalOneRemote)
-	defer deployment.Destroy(t)
-
-	doTestRestrictedRoomsRemoteJoinLocalUser(t, "8", "restricted", deployment)
-}
-
 func doTestRestrictedRoomsRemoteJoinLocalUser(t *testing.T, roomVersion string, joinRule string, deployment *docker.Deployment) {
 	runtime.SkipIf(t, runtime.Dendrite) // FIXME: https://github.com/matrix-org/dendrite/issues/2801
 
@@ -338,20 +351,6 @@ func doTestRestrictedRoomsRemoteJoinLocalUser(t *testing.T, roomVersion string, 
 	// the room anymore!
 	bob.LeaveRoom(t, room)
 	bob.JoinRoom(t, room, []string{"hs1"})
-}
-
-// A server will request a failover if asked to /make_join and it does not have
-// the appropriate authorisation to complete the request.
-//
-// Setup 3 homeservers:
-// * hs1 creates the allowed room/room.
-// * hs2 joins the room
-// * hs3 attempts to join via hs2 (should fail) and hs1 (should work)
-func TestRestrictedRoomsRemoteJoinFailOver(t *testing.T) {
-	deployment := Deploy(t, b.BlueprintFederationThreeHomeserversTwoUsersEach)
-	defer deployment.Destroy(t)
-
-	doTestRestrictedRoomsRemoteJoinFailOver(t, "8", "restricted", deployment)
 }
 
 func doTestRestrictedRoomsRemoteJoinFailOver(t *testing.T, roomVersion string, joinRule string, deployment *docker.Deployment) {
