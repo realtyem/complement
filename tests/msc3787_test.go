@@ -82,10 +82,16 @@ func TestRestrictedRoomsRemoteJoinInMSC3787Room(t *testing.T) {
 
 // See TestRestrictedRoomsRemoteJoinLocalUser
 func TestRestrictedRoomsRemoteJoinLocalUserInMSC3787Room(t *testing.T) {
-	doTestRestrictedRoomsRemoteJoinLocalUser(t, msc3787RoomVersion, msc3787JoinRule)
+	deployment := Deploy(t, b.BlueprintFederationTwoLocalOneRemote)
+	defer deployment.Destroy(t)
+
+	doTestRestrictedRoomsRemoteJoinLocalUser(t, msc3787RoomVersion, msc3787JoinRule, deployment)
 }
 
 // See TestRestrictedRoomsRemoteJoinFailOver
 func TestRestrictedRoomsRemoteJoinFailOverInMSC3787Room(t *testing.T) {
-	doTestRestrictedRoomsRemoteJoinFailOver(t, msc3787RoomVersion, msc3787JoinRule)
+	deployment := Deploy(t, b.BlueprintFederationThreeHomeserversTwoUsersEach)
+	defer deployment.Destroy(t)
+
+	doTestRestrictedRoomsRemoteJoinFailOver(t, msc3787RoomVersion, msc3787JoinRule, deployment)
 }

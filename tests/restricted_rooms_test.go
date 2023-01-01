@@ -221,14 +221,14 @@ func TestRestrictedRoomsRemoteJoin(t *testing.T) {
 // A server will do a remote join for a local user if it is unable to to issue
 // joins in a restricted room it is already participating in.
 func TestRestrictedRoomsRemoteJoinLocalUser(t *testing.T) {
-	doTestRestrictedRoomsRemoteJoinLocalUser(t, "8", "restricted")
-}
-
-func doTestRestrictedRoomsRemoteJoinLocalUser(t *testing.T, roomVersion string, joinRule string) {
-	runtime.SkipIf(t, runtime.Dendrite) // FIXME: https://github.com/matrix-org/dendrite/issues/2801
-
 	deployment := Deploy(t, b.BlueprintFederationTwoLocalOneRemote)
 	defer deployment.Destroy(t)
+
+	doTestRestrictedRoomsRemoteJoinLocalUser(t, "8", "restricted", deployment)
+}
+
+func doTestRestrictedRoomsRemoteJoinLocalUser(t *testing.T, roomVersion string, joinRule string, deployment *docker.Deployment) {
+	runtime.SkipIf(t, runtime.Dendrite) // FIXME: https://github.com/matrix-org/dendrite/issues/2801
 
 	// Charlie sets up the allowed room so it is on the other server.
 	//
@@ -348,14 +348,14 @@ func doTestRestrictedRoomsRemoteJoinLocalUser(t *testing.T, roomVersion string, 
 // * hs2 joins the room
 // * hs3 attempts to join via hs2 (should fail) and hs1 (should work)
 func TestRestrictedRoomsRemoteJoinFailOver(t *testing.T) {
-	doTestRestrictedRoomsRemoteJoinFailOver(t, "8", "restricted")
-}
-
-func doTestRestrictedRoomsRemoteJoinFailOver(t *testing.T, roomVersion string, joinRule string) {
-	runtime.SkipIf(t, runtime.Dendrite) // FIXME: https://github.com/matrix-org/dendrite/issues/2801
-
 	deployment := Deploy(t, b.BlueprintFederationThreeHomeserversTwoUsersEach)
 	defer deployment.Destroy(t)
+
+	doTestRestrictedRoomsRemoteJoinFailOver(t, "8", "restricted", deployment)
+}
+
+func doTestRestrictedRoomsRemoteJoinFailOver(t *testing.T, roomVersion string, joinRule string, deployment *docker.Deployment) {
+	runtime.SkipIf(t, runtime.Dendrite) // FIXME: https://github.com/matrix-org/dendrite/issues/2801
 
 	// Setup the user, allowed room, and restricted room.
 	alice, allowed_room, room := setupRestrictedRoom(t, deployment, roomVersion, joinRule)
