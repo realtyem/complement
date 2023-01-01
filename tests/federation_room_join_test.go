@@ -26,6 +26,73 @@ import (
 	"github.com/matrix-org/complement/runtime"
 )
 
+func TestFederationRoomJoin(t *testing.T) {
+	// BlueprintHSWithApplicationService has users:
+	// @alice.hs1, @bob:hs1, @the-bridge-user:hs1 charlie:hs2
+	deployment := Deploy(t, b.BlueprintHSWithApplicationService)
+	defer deployment.Destroy(t)
+
+	t.Run("parallel", func(t *testing.T) {
+		t.Run("CannotSendNonJoinViaSendJoinV1", func(t *testing.T) {
+			t.Parallel()
+			// This test checks that we cannot submit anything via /v1/send_join except a join.
+			// users needed: @alice:hs1
+			testValidationForSendMembershipEndpoint(t, "/_matrix/federation/v1/send_join", "join", nil, deployment)
+		})
+		t.Run("CannotSendNonJoinViaSendJoinV2", func(t *testing.T) {
+			t.Parallel()
+			// This test checks that we cannot submit anything via /v2/send_join except a join.
+			// users needed: @alice:hs1
+			testValidationForSendMembershipEndpoint(t, "/_matrix/federation/v2/send_join", "join", nil, deployment)
+		})
+		t.Run("CannotSendNonLeaveViaSendLeaveV1", func(t *testing.T) {
+			t.Parallel()
+			// This test checks that we cannot submit anything via /v1/send_leave except a leave.
+			// users needed: @alice:hs1
+			testValidationForSendMembershipEndpoint(t, "/_matrix/federation/v1/send_leave", "leave", nil, deployment)
+		})
+		t.Run("CannotSendNonLeaveViaSendLeaveV2", func(t *testing.T) {
+			t.Parallel()
+			// This test checks that we cannot submit anything via /v2/send_leave except a leave.
+			// users needed: @alice:hs1
+			testValidationForSendMembershipEndpoint(t, "/_matrix/federation/v2/send_leave", "leave", nil, deployment)
+		})
+		t.Run("BannedUserCannotSendJoin", func(t *testing.T) {
+			t.Parallel()
+			// This test checks that users cannot circumvent the auth checks via send_join.
+			// users needed: @alice:hs1, "fake" user @david(was @charlie)
+			doTestBannedUserCannotSendJoin(t, deployment)
+		})
+		t.Run("JoinFederatedRoomWithUnverifiableEvents", func(t *testing.T) {
+			t.Parallel()
+			// This tests that joining a room over federation works in the presence of:
+			// - Events with missing signatures
+			// - Events with bad signatures
+			// - Events with correct signatures but the keys cannot be obtained
+			// see subroutine below for more details
+			// users needed: @alice:hs1
+			doTestJoinFederatedRoomWithUnverifiableEvents(t, deployment)
+		})
+		t.Run("JoinViaRoomIDAndServerName", func(t *testing.T) {
+			t.Parallel()
+			// This tests that joining a room with ?server_name= works correctly.
+			// users needed: @alice:hs1, @charlie:hs2(was @bob:hs2) and "fake" @david(was @charlie)
+			doTestJoinViaRoomIDAndServerName(t, deployment)
+		})
+		t.Run("SendJoinPartialStateResponse", func(t *testing.T) {
+			t.Parallel()
+			// Tests an implementation's support for MSC3706-style partial-state responses to send_join.
+			// users needed: @alice:hs1, @bob:hs1, "fake" @david(was @charlie)
+			doTestSendJoinPartialStateResponse(t, deployment)
+		})
+		t.Run("JoinFederatedRoomFromApplicationServiceBridgeUser", func(t *testing.T) {
+			t.Parallel()
+			// users needed: @alice:hs1, @bob:hs1, @the-bridge-user:hs1, @charlie:hs2
+			doTestJoinFederatedRoomFromApplicationServiceBridgeUser(t, deployment)
+		})
+	})
+}
+
 // This tests that joining a room with ?server_name= works correctly.
 // It does this by creating a room on the Complement server and joining HS1 to it.
 // The Complement server then begins to refuse make/send_join requests and HS2 is
@@ -35,10 +102,7 @@ import (
 // We can't use a bogus room ID domain either as auth checks on the
 // m.room.create event would pick that up. We also can't tear down the Complement
 // server because otherwise signing key lookups will fail.
-func TestJoinViaRoomIDAndServerName(t *testing.T) {
-	deployment := Deploy(t, b.BlueprintFederationOneToOneRoom)
-	defer deployment.Destroy(t)
-
+func doTestJoinViaRoomIDAndServerName(t *testing.T, deployment *docker.Deployment) {
 	alice := deployment.Client(t, "hs1", "@alice:hs1")
 
 	acceptMakeSendJoinRequests := true
@@ -66,8 +130,8 @@ func TestJoinViaRoomIDAndServerName(t *testing.T) {
 	})).Methods("PUT")
 
 	ver := alice.GetDefaultRoomVersion(t)
-	charlie := srv.UserID("charlie")
-	serverRoom := srv.MustMakeRoom(t, ver, federation.InitialRoomEvents(ver, charlie))
+	david := srv.UserID("david")
+	serverRoom := srv.MustMakeRoom(t, ver, federation.InitialRoomEvents(ver, david))
 
 	// join the room by room ID, providing the serverName to join via
 	alice.JoinRoom(t, serverRoom.RoomID, []string{srv.ServerName()})
@@ -76,11 +140,11 @@ func TestJoinViaRoomIDAndServerName(t *testing.T) {
 	acceptMakeSendJoinRequests = false
 
 	// join the room using ?server_name on HS2
-	bob := deployment.Client(t, "hs2", "@bob:hs2")
+	charlie := deployment.Client(t, "hs2", "@charlie:hs2")
 
 	queryParams := url.Values{}
 	queryParams.Set("server_name", "hs1")
-	res := bob.DoFunc(t, "POST", []string{"_matrix", "client", "v3", "join", serverRoom.RoomID}, client.WithQueries(queryParams))
+	res := charlie.DoFunc(t, "POST", []string{"_matrix", "client", "v3", "join", serverRoom.RoomID}, client.WithQueries(queryParams))
 	must.MatchResponse(t, res, match.HTTPResponse{
 		StatusCode: 200,
 		JSON: []match.JSON{
@@ -101,10 +165,7 @@ func TestJoinViaRoomIDAndServerName(t *testing.T) {
 // This test works by creating several federated rooms on Complement which have
 // the properties listed above, then asking HS1 to join them and make sure that
 // they 200 OK.
-func TestJoinFederatedRoomWithUnverifiableEvents(t *testing.T) {
-	deployment := Deploy(t, b.BlueprintAlice)
-	defer deployment.Destroy(t)
-
+func doTestJoinFederatedRoomWithUnverifiableEvents(t *testing.T, deployment *docker.Deployment) {
 	alice := deployment.Client(t, "hs1", "@alice:hs1")
 
 	srv := federation.NewServer(t, deployment,
@@ -259,10 +320,7 @@ func TestJoinFederatedRoomWithUnverifiableEvents(t *testing.T) {
 }
 
 // This test checks that users cannot circumvent the auth checks via send_join.
-func TestBannedUserCannotSendJoin(t *testing.T) {
-	deployment := Deploy(t, b.BlueprintAlice)
-	defer deployment.Destroy(t)
-
+func doTestBannedUserCannotSendJoin(t *testing.T, deployment *docker.Deployment) {
 	srv := federation.NewServer(t, deployment,
 		federation.HandleKeyRequests(),
 		federation.HandleTransactionRequests(nil, nil),
@@ -272,9 +330,9 @@ func TestBannedUserCannotSendJoin(t *testing.T) {
 
 	fedClient := srv.FederationClient(deployment)
 
-	charlie := srv.UserID("charlie")
+	david := srv.UserID("david")
 
-	// alice creates a room, and bans charlie from it.
+	// alice creates a room, and bans david from it.
 	alice := deployment.Client(t, "hs1", "@alice:hs1")
 	roomID := alice.CreateRoom(t, map[string]interface{}{
 		"preset": "public_chat",
@@ -283,19 +341,19 @@ func TestBannedUserCannotSendJoin(t *testing.T) {
 	alice.SendEventSynced(t, roomID, b.Event{
 		Type:     "m.room.member",
 		Sender:   alice.UserID,
-		StateKey: &charlie,
+		StateKey: &david,
 		Content: map[string]interface{}{
 			"membership": "ban",
 		},
 	})
 
-	// charlie sends a make_join for a different user
-	makeJoinResp, err := fedClient.MakeJoin(context.Background(), "hs1", roomID, srv.UserID("charlie2"), federation.SupportedRoomVersions())
+	// david sends a make_join for a different user
+	makeJoinResp, err := fedClient.MakeJoin(context.Background(), "hs1", roomID, srv.UserID("david2"), federation.SupportedRoomVersions())
 	must.NotError(t, "MakeJoin", err)
 
 	// ... and does a switcheroo to turn it into a join for himself
-	makeJoinResp.JoinEvent.Sender = charlie
-	makeJoinResp.JoinEvent.StateKey = &charlie
+	makeJoinResp.JoinEvent.Sender = david
+	makeJoinResp.JoinEvent.StateKey = &david
 	joinEvent, err := makeJoinResp.JoinEvent.Build(time.Now(), gomatrixserverlib.ServerName(srv.ServerName()), srv.KeyID, srv.Priv, makeJoinResp.RoomVersion)
 	must.NotError(t, "JoinEvent.Build", err)
 
@@ -316,47 +374,15 @@ func TestBannedUserCannotSendJoin(t *testing.T) {
 		t.Errorf("SendJoin: non-HTTPError: %v", err)
 	}
 
-	// Alice checks the room state to check that charlie isn't a member
+	// Alice checks the room state to check that david isn't a member
 	res := alice.MustDoFunc(
 		t,
 		"GET",
-		[]string{"_matrix", "client", "v3", "rooms", roomID, "state", "m.room.member", charlie},
+		[]string{"_matrix", "client", "v3", "rooms", roomID, "state", "m.room.member", david},
 	)
 	stateResp := client.ParseJSON(t, res)
 	membership := must.GetJSONFieldStr(t, stateResp, "membership")
-	must.EqualStr(t, membership, "ban", "membership of charlie")
-}
-
-// This test checks that we cannot submit anything via /v1/send_join except a join.
-func TestCannotSendNonJoinViaSendJoinV1(t *testing.T) {
-	deployment := Deploy(t, b.BlueprintAlice)
-	defer deployment.Destroy(t)
-
-	testValidationForSendMembershipEndpoint(t, "/_matrix/federation/v1/send_join", "join", nil, deployment)
-}
-
-// This test checks that we cannot submit anything via /v2/send_join except a join.
-func TestCannotSendNonJoinViaSendJoinV2(t *testing.T) {
-	deployment := Deploy(t, b.BlueprintAlice)
-	defer deployment.Destroy(t)
-
-	testValidationForSendMembershipEndpoint(t, "/_matrix/federation/v2/send_join", "join", nil, deployment)
-}
-
-// This test checks that we cannot submit anything via /v1/send_leave except a leave.
-func TestCannotSendNonLeaveViaSendLeaveV1(t *testing.T) {
-	deployment := Deploy(t, b.BlueprintAlice)
-	defer deployment.Destroy(t)
-
-	testValidationForSendMembershipEndpoint(t, "/_matrix/federation/v1/send_leave", "leave", nil, deployment)
-}
-
-// This test checks that we cannot submit anything via /v2/send_leave except a leave.
-func TestCannotSendNonLeaveViaSendLeaveV2(t *testing.T) {
-	deployment := Deploy(t, b.BlueprintAlice)
-	defer deployment.Destroy(t)
-
-	testValidationForSendMembershipEndpoint(t, "/_matrix/federation/v2/send_leave", "leave", nil, deployment)
+	must.EqualStr(t, membership, "ban", "membership of david")
 }
 
 // testValidationForSendMembershipEndpoint attempts to submit a range of events via the given endpoint
@@ -466,11 +492,8 @@ func testValidationForSendMembershipEndpoint(t *testing.T, baseApiPath, expected
 // Tests an implementation's support for MSC3706-style partial-state responses to send_join.
 //
 // Will be skipped if the server returns a full-state response.
-func TestSendJoinPartialStateResponse(t *testing.T) {
+func doTestSendJoinPartialStateResponse(t *testing.T, deployment *docker.Deployment) {
 	// start with a homeserver with two users
-	deployment := Deploy(t, b.BlueprintOneToOneRoom)
-	defer deployment.Destroy(t)
-
 	srv := federation.NewServer(t, deployment,
 		federation.HandleKeyRequests(),
 
@@ -489,9 +512,9 @@ func TestSendJoinPartialStateResponse(t *testing.T) {
 	bob.JoinRoom(t, roomID, nil)
 
 	// now we send a make_join...
-	charlie := srv.UserID("charlie")
+	david := srv.UserID("david")
 	fedClient := srv.FederationClient(deployment)
-	makeJoinResp, err := fedClient.MakeJoin(context.Background(), "hs1", roomID, charlie, federation.SupportedRoomVersions())
+	makeJoinResp, err := fedClient.MakeJoin(context.Background(), "hs1", roomID, david, federation.SupportedRoomVersions())
 	if err != nil {
 		t.Fatalf("make_join failed: %v", err)
 	}
@@ -549,12 +572,9 @@ func typeAndStateKeyForEvent(result gjson.Result) string {
 	return strings.Join([]string{result.Map()["type"].Str, result.Map()["state_key"].Str}, "|")
 }
 
-func TestJoinFederatedRoomFromApplicationServiceBridgeUser(t *testing.T) {
+func doTestJoinFederatedRoomFromApplicationServiceBridgeUser(t *testing.T, deployment *docker.Deployment) {
 	// Dendrite doesn't read AS registration files from Complement yet
 	runtime.SkipIf(t, runtime.Dendrite) // FIXME: https://github.com/matrix-org/complement/issues/514
-
-	deployment := Deploy(t, b.BlueprintHSWithApplicationService)
-	defer deployment.Destroy(t)
 
 	// Create the application service bridge user to try to join the room from
 	asUserID := "@the-bridge-user:hs1"
