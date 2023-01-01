@@ -125,7 +125,7 @@ func (w *Waiter) Finish() {
 // If this is Github, it's to the benefit of time to run tests sequentially(generally speaking)
 func ParallelIfNotGithub(t *testing.T) {
 	t.Helper()
-	if os.Getenv("GITHUB_WORKFLOW") == "" {
+	if os.Getenv("WORKERS") == "" {
 		t.Parallel()
 	}
 }
