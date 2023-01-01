@@ -348,38 +348,7 @@ func doTestRestrictedRoomsRemoteJoinLocalUser(t *testing.T, roomVersion string, 
 // * hs2 joins the room
 // * hs3 attempts to join via hs2 (should fail) and hs1 (should work)
 func TestRestrictedRoomsRemoteJoinFailOver(t *testing.T) {
-	deployment := Deploy(t, b.Blueprint{
-		Name: "federation_three_homeservers",
-		Homeservers: []b.Homeserver{
-			{
-				Name: "hs1",
-				Users: []b.User{
-					{
-						Localpart:   "alice",
-						DisplayName: "Alice",
-					},
-				},
-			},
-			{
-				Name: "hs2",
-				Users: []b.User{
-					{
-						Localpart:   "bob",
-						DisplayName: "Bob",
-					},
-				},
-			},
-			{
-				Name: "hs3",
-				Users: []b.User{
-					{
-						Localpart:   "charlie",
-						DisplayName: "Charlie",
-					},
-				},
-			},
-		},
-	})
+	deployment := Deploy(t, b.BlueprintThreeHomeserversTwoUsersEach)
 	defer deployment.Destroy(t)
 
 
@@ -406,37 +375,37 @@ func doTestRestrictedRoomsRemoteJoinFailOver(t *testing.T, roomVersion string, j
 	})
 
 	// Create a second user on a different homeserver.
-	bob := deployment.Client(t, "hs2", "@bob:hs2")
+	charlie := deployment.Client(t, "hs2", "@charlie:hs2")
 
-	// Bob joins the room and allowed room.
-	bob.JoinRoom(t, allowed_room, []string{"hs1"})
-	bob.JoinRoom(t, room, []string{"hs1"})
-
-	// Charlie should join the allowed room (which gives access to the room).
-	charlie := deployment.Client(t, "hs3", "@charlie:hs3")
+	// Charlie joins the room and allowed room.
 	charlie.JoinRoom(t, allowed_room, []string{"hs1"})
+	charlie.JoinRoom(t, room, []string{"hs1"})
+
+	// George should join the allowed room (which gives access to the room).
+	george := deployment.Client(t, "hs3", "@george:hs3")
+	george.JoinRoom(t, allowed_room, []string{"hs1"})
 
 	// hs2 doesn't have anyone to invite from, so the join fails.
-	failJoinRoom(t, charlie, room, "hs2")
+	failJoinRoom(t, george, room, "hs2")
 
 	// Including hs1 (and failing over to it) allows the join to succeed.
-	charlie.JoinRoom(t, room, []string{"hs2", "hs1"})
+	george.JoinRoom(t, room, []string{"hs2", "hs1"})
 
 	// Double check that the join was authorised via hs1.
-	bob.MustSyncUntil(t, client.SyncReq{}, client.SyncTimelineHas(
+	charlie.MustSyncUntil(t, client.SyncReq{}, client.SyncTimelineHas(
 		room,
 		func(ev gjson.Result) bool {
-			if ev.Get("type").Str != "m.room.member" || ev.Get("state_key").Str != charlie.UserID {
+			if ev.Get("type").Str != "m.room.member" || ev.Get("state_key").Str != george.UserID {
 				return false
 			}
-			must.EqualStr(t, ev.Get("content").Get("membership").Str, "join", "Charlie failed to join the room")
+			must.EqualStr(t, ev.Get("content").Get("membership").Str, "join", "George failed to join the room")
 			must.EqualStr(t, ev.Get("content").Get("join_authorised_via_users_server").Str, alice.UserID, "Join authorised via incorrect server")
 
 			return true
 		},
 	))
 
-	// Bump the power-level of bob.
+	// Bump the power-level of charlie.
 	alice.SendEventSynced(t, room, b.Event{
 		Type:     "m.room.power_levels",
 		StateKey: &state_key,
@@ -444,44 +413,44 @@ func doTestRestrictedRoomsRemoteJoinFailOver(t *testing.T, roomVersion string, j
 			"invite": 100,
 			"users": map[string]interface{}{
 				alice.UserID: 100,
-				bob.UserID:   100,
+				charlie.UserID:   100,
 			},
 		},
 	})
 
-	// Charlie leaves the room (so they can rejoin).
-	charlie.LeaveRoom(t, room)
+	// George leaves the room (so they can rejoin).
+	george.LeaveRoom(t, room)
 
 	// Ensure the events have synced to hs2.
-	bob.MustSyncUntil(t, client.SyncReq{}, client.SyncTimelineHas(
+	charlie.MustSyncUntil(t, client.SyncReq{}, client.SyncTimelineHas(
 		room,
 		func(ev gjson.Result) bool {
-			if ev.Get("type").Str != "m.room.member" || ev.Get("state_key").Str != charlie.UserID {
+			if ev.Get("type").Str != "m.room.member" || ev.Get("state_key").Str != george.UserID {
 				return false
 			}
 			return ev.Get("content").Get("membership").Str == "leave"
 		},
 	))
 
-	// Bob leaves the allowed room so that hs2 doesn't know if Charlie is in the
+	// Charlie leaves the allowed room so that hs2 doesn't know if George is in the
 	// allowed room or not.
-	bob.LeaveRoom(t, allowed_room)
+	charlie.LeaveRoom(t, allowed_room)
 
-	// hs2 cannot complete the join since they do not know if Charlie meets the
+	// hs2 cannot complete the join since they do not know if George meets the
 	// requirements (since it is no longer in the allowed room).
-	failJoinRoom(t, charlie, room, "hs2")
+	failJoinRoom(t, george, room, "hs2")
 
 	// Including hs1 (and failing over to it) allows the join to succeed.
-	charlie.JoinRoom(t, room, []string{"hs2", "hs1"})
+	george.JoinRoom(t, room, []string{"hs2", "hs1"})
 
 	// Double check that the join was authorised via hs1.
-	bob.MustSyncUntil(t, client.SyncReq{}, client.SyncTimelineHas(
+	charlie.MustSyncUntil(t, client.SyncReq{}, client.SyncTimelineHas(
 		room,
 		func(ev gjson.Result) bool {
-			if ev.Get("type").Str != "m.room.member" || ev.Get("state_key").Str != charlie.UserID {
+			if ev.Get("type").Str != "m.room.member" || ev.Get("state_key").Str != george.UserID {
 				return false
 			}
-			must.EqualStr(t, ev.Get("content").Get("membership").Str, "join", "Charlie failed to join the room")
+			must.EqualStr(t, ev.Get("content").Get("membership").Str, "join", "George failed to join the room")
 			must.EqualStr(t, ev.Get("content").Get("join_authorised_via_users_server").Str, alice.UserID, "Join authorised via incorrect server")
 
 			return true

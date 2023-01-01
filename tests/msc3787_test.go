@@ -126,7 +126,7 @@ func TestMSC3787(t *testing.T) {
 
 		})
 		t.Run("KnockRoomsInPublicRoomsDirectoryInMSC3787Room", func(t *testing.T) {
-			//t.Parallel()
+			t.Parallel()
 			// See TestKnockRoomsInPublicRoomsDirectory(in knocking_test.go)
 			// TestKnockRoomsInPublicRoomsDirectoryInMSC3787Room
 			// with users: alice
@@ -284,7 +284,6 @@ func TestMSC3787(t *testing.T) {
 	})
 	t.Run("RestrictedRoomsRemoteJoinFailOverInMSC3787Room", func(t *testing.T) {
 		// See TestRestrictedRoomsRemoteJoinFailOver
-		//doTestRestrictedRoomsRemoteJoinFailOver(t, msc3787RoomVersion, msc3787JoinRule)
 		// TestRestrictedRoomsRemoteJoinFailOverInMSC3787Room
 		// uses custom Blueprint with 3 homeservers
 		// with users: alice:hs1, bob:hs2, charlie:hs3
@@ -294,106 +293,7 @@ func TestMSC3787(t *testing.T) {
 		//  george:hs3  helen:hs3
 
 		runtime.SkipIf(t, runtime.Dendrite) // FIXME: https://github.com/matrix-org/dendrite/issues/2801
-		roomVersion := msc3787RoomVersion
-		joinRule := msc3787JoinRule
+		doTestRestrictedRoomsRemoteJoinFailOver(t, msc3787RoomVersion, msc3787JoinRule, deployment)
 
-		// Setup the user, allowed room, and restricted room.
-		alice, allowed_room, room := setupRestrictedRoom(t, deployment, roomVersion, joinRule)
-
-		// Raise the power level so that only alice can invite.
-		state_key := ""
-		alice.SendEventSynced(t, room, b.Event{
-			Type:     "m.room.power_levels",
-			StateKey: &state_key,
-			Content: map[string]interface{}{
-				"invite": 100,
-				"users": map[string]interface{}{
-					alice.UserID: 100,
-				},
-			},
-		})
-
-		// Create a second user on a different homeserver.
-		charlie := deployment.Client(t, "hs2", "@charlie:hs2")
-
-		// Charlie joins the room and allowed room.
-		charlie.JoinRoom(t, allowed_room, []string{"hs1"})
-		charlie.JoinRoom(t, room, []string{"hs1"})
-
-		// George should join the allowed room (which gives access to the room).
-		george := deployment.Client(t, "hs3", "@george:hs3")
-		george.JoinRoom(t, allowed_room, []string{"hs1"})
-
-		// hs2 doesn't have anyone to invite from, so the join fails.
-		failJoinRoom(t, george, room, "hs2")
-
-		// Including hs1 (and failing over to it) allows the join to succeed.
-		george.JoinRoom(t, room, []string{"hs2", "hs1"})
-
-		// Double check that the join was authorised via hs1.
-		charlie.MustSyncUntil(t, client.SyncReq{}, client.SyncTimelineHas(
-			room,
-			func(ev gjson.Result) bool {
-				if ev.Get("type").Str != "m.room.member" || ev.Get("state_key").Str != george.UserID {
-					return false
-				}
-				must.EqualStr(t, ev.Get("content").Get("membership").Str, "join", "George failed to join the room")
-				must.EqualStr(t, ev.Get("content").Get("join_authorised_via_users_server").Str, alice.UserID, "Join authorised via incorrect server")
-
-				return true
-			},
-		))
-
-		// Bump the power-level of charlie.
-		alice.SendEventSynced(t, room, b.Event{
-			Type:     "m.room.power_levels",
-			StateKey: &state_key,
-			Content: map[string]interface{}{
-				"invite": 100,
-				"users": map[string]interface{}{
-					alice.UserID: 100,
-					charlie.UserID:   100,
-				},
-			},
-		})
-
-		// George leaves the room (so they can rejoin).
-		george.LeaveRoom(t, room)
-
-		// Ensure the events have synced to hs2.
-		charlie.MustSyncUntil(t, client.SyncReq{}, client.SyncTimelineHas(
-			room,
-			func(ev gjson.Result) bool {
-				if ev.Get("type").Str != "m.room.member" || ev.Get("state_key").Str != george.UserID {
-					return false
-				}
-				return ev.Get("content").Get("membership").Str == "leave"
-			},
-		))
-
-		// Charlie leaves the allowed room so that hs2 doesn't know if George is in the
-		// allowed room or not.
-		charlie.LeaveRoom(t, allowed_room)
-
-		// hs2 cannot complete the join since they do not know if George meets the
-		// requirements (since it is no longer in the allowed room).
-		failJoinRoom(t, george, room, "hs2")
-
-		// Including hs1 (and failing over to it) allows the join to succeed.
-		george.JoinRoom(t, room, []string{"hs2", "hs1"})
-
-		// Double check that the join was authorised via hs1.
-		charlie.MustSyncUntil(t, client.SyncReq{}, client.SyncTimelineHas(
-			room,
-			func(ev gjson.Result) bool {
-				if ev.Get("type").Str != "m.room.member" || ev.Get("state_key").Str != george.UserID {
-					return false
-				}
-				must.EqualStr(t, ev.Get("content").Get("membership").Str, "join", "George failed to join the room")
-				must.EqualStr(t, ev.Get("content").Get("join_authorised_via_users_server").Str, alice.UserID, "Join authorised via incorrect server")
-
-				return true
-			},
-		))
 	})
 }
