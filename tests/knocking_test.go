@@ -21,6 +21,7 @@ import (
 
 	"github.com/matrix-org/complement/internal/b"
 	"github.com/matrix-org/complement/internal/client"
+	"github.com/matrix-org/complement/internal/docker"
 	"github.com/matrix-org/complement/internal/federation"
 	"github.com/matrix-org/complement/internal/match"
 	"github.com/matrix-org/complement/internal/must"
@@ -33,14 +34,14 @@ const testKnockReason string = "Let me in... LET ME IN!!!"
 // Knocking is currently an experimental feature and not in the matrix spec.
 // This function tests knocking on local and remote room.
 func TestKnocking(t *testing.T) {
-	// v7 is required for knocking support
-	doTestKnocking(t, "7", "knock")
-}
-
-func doTestKnocking(t *testing.T, roomVersion string, joinRule string) {
 	deployment := Deploy(t, b.BlueprintFederationTwoLocalOneRemote)
 	defer deployment.Destroy(t)
 
+	// v7 is required for knocking support
+	doTestKnocking(t, "7", "knock", deployment)
+}
+
+func doTestKnocking(t *testing.T, roomVersion string, joinRule string, deployment *docker.Deployment) {
 	// Create a client for one local user
 	aliceUserID := "@alice:hs1"
 	alice := deployment.Client(t, "hs1", aliceUserID)
@@ -359,13 +360,14 @@ func knockOnRoomWithStatus(t *testing.T, c *client.CSAPI, roomID, reason string,
 // representing a knock room. For sanity-checking, this test will also create a public room and ensure it has a
 // 'join_rule' representing a publicly-joinable room.
 func TestKnockRoomsInPublicRoomsDirectory(t *testing.T) {
-	// v7 is required for knocking
-	doTestKnockRoomsInPublicRoomsDirectory(t, "7", "knock")
-}
-
-func doTestKnockRoomsInPublicRoomsDirectory(t *testing.T, roomVersion string, joinRule string) {
 	deployment := Deploy(t, b.BlueprintAlice)
 	defer deployment.Destroy(t)
+
+	// v7 is required for knocking
+	doTestKnockRoomsInPublicRoomsDirectory(t, "7", "knock", deployment)
+}
+
+func doTestKnockRoomsInPublicRoomsDirectory(t *testing.T, roomVersion string, joinRule string, deployment *docker.Deployment) {
 
 	// Create a client for a local user
 	aliceUserID := "@alice:hs1"

@@ -22,12 +22,18 @@ var (
 
 // See TestKnocking
 func TestKnockingInMSC3787Room(t *testing.T) {
-	doTestKnocking(t, msc3787RoomVersion, msc3787JoinRule)
+	deployment := Deploy(t, b.BlueprintFederationTwoLocalOneRemote)
+	defer deployment.Destroy(t)
+
+	doTestKnocking(t, msc3787RoomVersion, msc3787JoinRule, deployment)
 }
 
 // See TestKnockRoomsInPublicRoomsDirectory
 func TestKnockRoomsInPublicRoomsDirectoryInMSC3787Room(t *testing.T) {
-	doTestKnockRoomsInPublicRoomsDirectory(t, msc3787RoomVersion, msc3787JoinRule)
+	deployment := Deploy(t, b.BlueprintAlice)
+	defer deployment.Destroy(t)
+
+	doTestKnockRoomsInPublicRoomsDirectory(t, msc3787RoomVersion, msc3787JoinRule, deployment)
 }
 
 // See TestCannotSendKnockViaSendKnock
