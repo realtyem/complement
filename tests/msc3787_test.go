@@ -66,64 +66,7 @@ func TestMSC3787(t *testing.T) {
 			// TestKnockingInMSC3787Room
 			// See TestKnocking(in knocking_test.go)
 			// with users: alice, bob, charlie and fake user david
-			//doTestKnocking(t, msc3787RoomVersion, msc3787JoinRule)
-			roomVersion := msc3787RoomVersion
-			joinRule := msc3787JoinRule
-			// Create a client for one local user
-			alice := deployment.Client(t, "hs1", "@alice:hs1")
-
-			// Create a client for another local user
-			bob := deployment.Client(t, "hs1", "@bob:hs1")
-
-			// Create a client for a remote user
-			charlie := deployment.Client(t, "hs2", "@charlie:hs2")
-
-			// Create a server to observe
-			inviteWaiter := NewWaiter()
-			srv := federation.NewServer(t, deployment,
-				federation.HandleKeyRequests(),
-				federation.HandleInviteRequests(func(ev *gomatrixserverlib.Event) {
-					inviteWaiter.Finish()
-				}),
-				federation.HandleTransactionRequests(nil, nil),
-			)
-			cancel := srv.Listen()
-			defer cancel()
-			srv.UnexpectedRequestsAreErrors = false
-			david := srv.UserID("david")
-
-			// Create a room for alice and bob to test knocking with
-			roomIDOne := alice.CreateRoom(t, struct {
-				Preset      string `json:"preset"`
-				RoomVersion string `json:"room_version"`
-			}{
-				"private_chat", // Set to private in order to get an invite-only room
-				roomVersion,
-			})
-			alice.InviteRoom(t, roomIDOne, david)
-			inviteWaiter.Wait(t, 5*time.Second)
-			serverRoomOne := srv.MustJoinRoom(t, deployment, "hs1", roomIDOne, david)
-
-			// Test knocking between two users on the same homeserver
-			knockingBetweenTwoUsersTest(t, roomIDOne, alice, bob, serverRoomOne, false, joinRule)
-
-			// Create a room for alice and charlie to test knocking with
-			roomIDTwo := alice.CreateRoom(t, struct {
-				Preset      string `json:"preset"`
-				RoomVersion string `json:"room_version"`
-			}{
-				"private_chat", // Set to private in order to get an invite-only room
-				roomVersion,
-			})
-			inviteWaiter = NewWaiter()
-			alice.InviteRoom(t, roomIDTwo, david)
-			inviteWaiter.Wait(t, 5*time.Second)
-			serverRoomTwo := srv.MustJoinRoom(t, deployment, "hs1", roomIDTwo, david)
-
-			// Test knocking between two users, each on a separate homeserver
-			knockingBetweenTwoUsersTest(t, roomIDTwo, alice, charlie, serverRoomTwo, true, joinRule)
-
-
+			doTestKnocking(t, msc3787RoomVersion, msc3787JoinRule, deployment)
 		})
 		t.Run("KnockRoomsInPublicRoomsDirectoryInMSC3787Room", func(t *testing.T) {
 			ParallelIfNotGithub(t)

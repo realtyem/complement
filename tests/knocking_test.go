@@ -34,14 +34,13 @@ const testKnockReason string = "Let me in... LET ME IN!!!"
 // Knocking is currently an experimental feature and not in the matrix spec.
 // This function tests knocking on local and remote room.
 func TestKnocking(t *testing.T) {
-	// v7 is required for knocking support
-	doTestKnocking(t, "7", "knock")
-}
-
-func doTestKnocking(t *testing.T, roomVersion string, joinRule string) {
 	deployment := Deploy(t, b.BlueprintFederationTwoLocalOneRemote)
 	defer deployment.Destroy(t)
+	// v7 is required for knocking support
+	doTestKnocking(t, "7", "knock", deployment)
+}
 
+func doTestKnocking(t *testing.T, roomVersion string, joinRule string, deployment *docker.Deployment) {
 	// Create a client for one local user
 	aliceUserID := "@alice:hs1"
 	alice := deployment.Client(t, "hs1", aliceUserID)
