@@ -30,15 +30,43 @@ import (
 // A reason to include in the request body when testing knock reason parameters
 const testKnockReason string = "Let me in... LET ME IN!!!"
 
-// TestKnocking tests sending knock membership events and transitioning from knock to other membership states.
-// Knocking is currently an experimental feature and not in the matrix spec.
-// This function tests knocking on local and remote room.
 func TestKnocking(t *testing.T) {
 	deployment := Deploy(t, b.BlueprintFederationTwoLocalOneRemote)
 	defer deployment.Destroy(t)
 
-	// v7 is required for knocking support
-	doTestKnocking(t, "7", "knock", deployment)
+	t.Run("parallel", func(t *testing.T) {
+		t.Run("basicKnocking", func(t *testing.T) {
+			t.Parallel()
+			// TestKnocking tests sending knock membership events and transitioning from knock to other membership states.
+			// Knocking is currently an experimental feature and not in the matrix spec.
+			// This function tests knocking on local and remote room.
+			// users needed: @alice:hs1, @bob:hs1, @charlie:hs2
+			// v7 is required for knocking support
+			doTestKnocking(t, "7", "knock", deployment)
+		})
+		t.Run("PublicRoomsDirectoryKnocking", func(t *testing.T) {
+			t.Parallel()
+			// TestKnockRoomsInPublicRoomsDirectory will create a knock room, attempt to publish it to the public rooms directory,
+			// and then check that the room appears in the directory. The room's entry should also have a 'join_rule' field
+			// representing a knock room. For sanity-checking, this test will also create a public room and ensure it has a
+			// 'join_rule' representing a publicly-joinable room.
+			// users needed: @alice:hs1
+			// v7 is required for knocking
+			doTestKnockRoomsInPublicRoomsDirectory(t, "7", "knock", deployment)
+		})
+		t.Run("cannotSendNonKnockViaSendKnock", func(t *testing.T) {
+			t.Parallel()
+			// TestCannotSendNonKnockViaSendKnock checks that we cannot submit anything via /send_knock except a knock
+			// users needed: @alice:hs1
+			testValidationForSendMembershipEndpoint(t, "/_matrix/federation/v1/send_knock", "knock",
+				map[string]interface{}{
+					"preset":       "public_chat",
+					"room_version": "7",
+				},
+				deployment,
+			)
+		})
+	})
 }
 
 func doTestKnocking(t *testing.T, roomVersion string, joinRule string, deployment *docker.Deployment) {
@@ -355,18 +383,6 @@ func knockOnRoomWithStatus(t *testing.T, c *client.CSAPI, roomID, reason string,
 	})
 }
 
-// TestKnockRoomsInPublicRoomsDirectory will create a knock room, attempt to publish it to the public rooms directory,
-// and then check that the room appears in the directory. The room's entry should also have a 'join_rule' field
-// representing a knock room. For sanity-checking, this test will also create a public room and ensure it has a
-// 'join_rule' representing a publicly-joinable room.
-func TestKnockRoomsInPublicRoomsDirectory(t *testing.T) {
-	deployment := Deploy(t, b.BlueprintAlice)
-	defer deployment.Destroy(t)
-
-	// v7 is required for knocking
-	doTestKnockRoomsInPublicRoomsDirectory(t, "7", "knock", deployment)
-}
-
 func doTestKnockRoomsInPublicRoomsDirectory(t *testing.T, roomVersion string, joinRule string, deployment *docker.Deployment) {
 
 	// Create a client for a local user
@@ -451,19 +467,5 @@ func publishAndCheckRoomJoinRule(t *testing.T, c *client.CSAPI, roomID, expected
 			}
 			return roomFound
 		}),
-	)
-}
-
-// TestCannotSendNonKnockViaSendKnock checks that we cannot submit anything via /send_knock except a knock
-func TestCannotSendNonKnockViaSendKnock(t *testing.T) {
-	deployment := Deploy(t, b.BlueprintAlice)
-	defer deployment.Destroy(t)
-
-	testValidationForSendMembershipEndpoint(t, "/_matrix/federation/v1/send_knock", "knock",
-		map[string]interface{}{
-			"preset":       "public_chat",
-			"room_version": "7",
-		},
-		deployment,
 	)
 }
