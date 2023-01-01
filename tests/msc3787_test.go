@@ -20,78 +20,62 @@ var (
 	msc3787JoinRule    = "knock_restricted"
 )
 
-// See TestKnocking
-func TestKnockingInMSC3787Room(t *testing.T) {
-	deployment := Deploy(t, b.BlueprintFederationTwoLocalOneRemote)
-	defer deployment.Destroy(t)
-
-	doTestKnocking(t, msc3787RoomVersion, msc3787JoinRule, deployment)
-}
-
-// See TestKnockRoomsInPublicRoomsDirectory
-func TestKnockRoomsInPublicRoomsDirectoryInMSC3787Room(t *testing.T) {
-	deployment := Deploy(t, b.BlueprintAlice)
-	defer deployment.Destroy(t)
-
-	doTestKnockRoomsInPublicRoomsDirectory(t, msc3787RoomVersion, msc3787JoinRule, deployment)
-}
-
-// See TestCannotSendKnockViaSendKnock
-func TestCannotSendKnockViaSendKnockInMSC3787Room(t *testing.T) {
-	deployment := Deploy(t, b.BlueprintAlice)
-	defer deployment.Destroy(t)
-
-	testValidationForSendMembershipEndpoint(t, "/_matrix/federation/v1/send_knock", "knock",
-		map[string]interface{}{
-			"preset":       "public_chat",
-			"room_version": msc3787RoomVersion,
-		},
-		deployment,
-	)
-}
-
-// See TestRestrictedRoomsLocalJoin
-func TestRestrictedRoomsLocalJoinInMSC3787Room(t *testing.T) {
-	deployment := Deploy(t, b.BlueprintOneToOneRoom)
-	defer deployment.Destroy(t)
-
-	// Setup the user, allowed room, and restricted room.
-	alice, allowed_room, room := setupRestrictedRoom(t, deployment, msc3787RoomVersion, msc3787JoinRule)
-
-	// Create a second user on the same homeserver.
-	bob := deployment.Client(t, "hs1", "@bob:hs1")
-
-	// Execute the checks.
-	checkRestrictedRoom(t, alice, bob, allowed_room, room, msc3787JoinRule)
-}
-
-// See TestRestrictedRoomsRemoteJoin
-func TestRestrictedRoomsRemoteJoinInMSC3787Room(t *testing.T) {
-	deployment := Deploy(t, b.BlueprintFederationOneToOneRoom)
-	defer deployment.Destroy(t)
-
-	// Setup the user, allowed room, and restricted room.
-	alice, allowed_room, room := setupRestrictedRoom(t, deployment, msc3787RoomVersion, msc3787JoinRule)
-
-	// Create a second user on a different homeserver.
-	bob := deployment.Client(t, "hs2", "@bob:hs2")
-
-	// Execute the checks.
-	checkRestrictedRoom(t, alice, bob, allowed_room, room, msc3787JoinRule)
-}
-
-// See TestRestrictedRoomsRemoteJoinLocalUser
-func TestRestrictedRoomsRemoteJoinLocalUserInMSC3787Room(t *testing.T) {
-	deployment := Deploy(t, b.BlueprintFederationTwoLocalOneRemote)
-	defer deployment.Destroy(t)
-
-	doTestRestrictedRoomsRemoteJoinLocalUser(t, msc3787RoomVersion, msc3787JoinRule, deployment)
-}
-
-// See TestRestrictedRoomsRemoteJoinFailOver
-func TestRestrictedRoomsRemoteJoinFailOverInMSC3787Room(t *testing.T) {
+func TestMSC3787(t *testing.T) {
 	deployment := Deploy(t, b.BlueprintFederationThreeHomeserversTwoUsersEach)
 	defer deployment.Destroy(t)
 
-	doTestRestrictedRoomsRemoteJoinFailOver(t, msc3787RoomVersion, msc3787JoinRule, deployment)
+	t.Run("knocking", func(t *testing.T) {
+		// See TestKnocking
+		// needs users: alice:hs1, bob:hs1, charlie:hs2
+		doTestKnocking(t, msc3787RoomVersion, msc3787JoinRule, deployment)
+	})
+	t.Run("knockRoomsInPublicRoomsDirectory", func(t *testing.T) {
+		// See TestKnockRoomsInPublicRoomsDirectory
+		// needs users: alice:hs1
+		doTestKnockRoomsInPublicRoomsDirectory(t, msc3787RoomVersion, msc3787JoinRule, deployment)
+	})
+	t.Run("cannotSendKnockViaSendKnock", func(t *testing.T) {
+		// See TestCannotSendKnockViaSendKnock
+		// needs user: alice:hs1
+		testValidationForSendMembershipEndpoint(t, "/_matrix/federation/v1/send_knock", "knock",
+			map[string]interface{}{
+				"preset":       "public_chat",
+				"room_version": msc3787RoomVersion,
+			},
+			deployment,
+		)
+	})
+	t.Run("restrictedRoomsLocalJoin", func(t *testing.T) {
+		// See TestRestrictedRoomsLocalJoin
+		// need users: alice:hs1, bob:hs1
+		// Setup the user, allowed room, and restricted room.
+		alice, allowed_room, room := setupRestrictedRoom(t, deployment, msc3787RoomVersion, msc3787JoinRule)
+
+		// Create a second user on the same homeserver.
+		bob := deployment.Client(t, "hs1", "@bob:hs1")
+
+		// Execute the checks.
+		checkRestrictedRoom(t, alice, bob, allowed_room, room, msc3787JoinRule)
+	})
+	t.Run("restrictedRoomsRemoteJoin", func(t *testing.T) {
+		// See TestRestrictedRoomsRemoteJoin
+		// need users: alice:hs1, charlie:hs2
+		// Setup the user, allowed room, and restricted room.
+		alice, allowed_room, room := setupRestrictedRoom(t, deployment, msc3787RoomVersion, msc3787JoinRule)
+
+		// Create a second user on a different homeserver.
+		charlie := deployment.Client(t, "hs2", "@charlie:hs2")
+
+		// Execute the checks.
+		checkRestrictedRoom(t, alice, charlie, allowed_room, room, msc3787JoinRule)
+	})
+	t.Run("restrictedRoomsRemoteJoinLocalUser", func(t *testing.T) {
+		// See TestRestrictedRoomsRemoteJoinLocalUser
+		// needs users: alice:hs1, bob:hs1, charlie:hs2
+		doTestRestrictedRoomsRemoteJoinLocalUser(t, msc3787RoomVersion, msc3787JoinRule, deployment)
+	})
+	t.Run("restrictedRoomsRemoteJoinFailOver", func(t *testing.T) {
+	// See TestRestrictedRoomsRemoteJoinFailOver
+		doTestRestrictedRoomsRemoteJoinFailOver(t, msc3787RoomVersion, msc3787JoinRule, deployment)
+	})
 }
