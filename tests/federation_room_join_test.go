@@ -19,6 +19,7 @@ import (
 
 	"github.com/matrix-org/complement/internal/b"
 	"github.com/matrix-org/complement/internal/client"
+	"github.com/matrix-org/complement/internal/docker"
 	"github.com/matrix-org/complement/internal/federation"
 	"github.com/matrix-org/complement/internal/match"
 	"github.com/matrix-org/complement/internal/must"
@@ -325,38 +326,36 @@ func TestBannedUserCannotSendJoin(t *testing.T) {
 	membership := must.GetJSONFieldStr(t, stateResp, "membership")
 	must.EqualStr(t, membership, "ban", "membership of charlie")
 }
+func TestCannotSend(t *testing.T) {
+	deployment := Deploy(t, b.BlueprintAlice)
+	defer deployment.Destroy(t)
 
-// This test checks that we cannot submit anything via /v1/send_join except a join.
-func TestCannotSendNonJoinViaSendJoinV1(t *testing.T) {
-	testValidationForSendMembershipEndpoint(t, "/_matrix/federation/v1/send_join", "join", nil)
-}
-
-// This test checks that we cannot submit anything via /v2/send_join except a join.
-func TestCannotSendNonJoinViaSendJoinV2(t *testing.T) {
-	testValidationForSendMembershipEndpoint(t, "/_matrix/federation/v2/send_join", "join", nil)
-}
-
-// This test checks that we cannot submit anything via /v1/send_leave except a leave.
-func TestCannotSendNonLeaveViaSendLeaveV1(t *testing.T) {
-	testValidationForSendMembershipEndpoint(t, "/_matrix/federation/v1/send_leave", "leave", nil)
-}
-
-// This test checks that we cannot submit anything via /v2/send_leave except a leave.
-func TestCannotSendNonLeaveViaSendLeaveV2(t *testing.T) {
-	testValidationForSendMembershipEndpoint(t, "/_matrix/federation/v2/send_leave", "leave", nil)
+	// This test checks that we cannot submit anything via /v1/send_join except a join.
+	t.Run("NonJoinViaSendJoinV1", func(t *testing.T) {
+		testValidationForSendMembershipEndpoint(t, "/_matrix/federation/v1/send_join", "join", nil, deployment)
+	})
+	// This test checks that we cannot submit anything via /v2/send_join except a join.
+	t.Run("NonJoinViaSendJoinV2", func(t *testing.T) {
+		testValidationForSendMembershipEndpoint(t, "/_matrix/federation/v2/send_join", "join", nil, deployment)
+	})
+	// This test checks that we cannot submit anything via /v1/send_leave except a leave.
+	t.Run("NonLeaveViaSendLeaveV1", func(t *testing.T) {
+		testValidationForSendMembershipEndpoint(t, "/_matrix/federation/v1/send_leave", "leave", nil, deployment)
+	})
+	// This test checks that we cannot submit anything via /v2/send_leave except a leave.
+	t.Run("NonLeaveViaSendLeaveV2", func(t *testing.T) {
+		testValidationForSendMembershipEndpoint(t, "/_matrix/federation/v2/send_leave", "leave", nil, deployment)
+	})
 }
 
 // testValidationForSendMembershipEndpoint attempts to submit a range of events via the given endpoint
 // and checks that they are all rejected.
-func testValidationForSendMembershipEndpoint(t *testing.T, baseApiPath, expectedMembership string, createRoomOpts map[string]interface{}) {
+func testValidationForSendMembershipEndpoint(t *testing.T, baseApiPath, expectedMembership string, createRoomOpts map[string]interface{}, deployment *docker.Deployment) {
 	if createRoomOpts == nil {
 		createRoomOpts = map[string]interface{}{
 			"preset": "public_chat",
 		}
 	}
-
-	deployment := Deploy(t, b.BlueprintAlice)
-	defer deployment.Destroy(t)
 
 	srv := federation.NewServer(t, deployment,
 		federation.HandleKeyRequests(),
