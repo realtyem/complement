@@ -454,10 +454,14 @@ func publishAndCheckRoomJoinRule(t *testing.T, c *client.CSAPI, roomID, expected
 
 // TestCannotSendNonKnockViaSendKnock checks that we cannot submit anything via /send_knock except a knock
 func TestCannotSendNonKnockViaSendKnock(t *testing.T) {
+	deployment := Deploy(t, b.BlueprintAlice)
+	defer deployment.Destroy(t)
+
 	testValidationForSendMembershipEndpoint(t, "/_matrix/federation/v1/send_knock", "knock",
 		map[string]interface{}{
 			"preset":       "public_chat",
 			"room_version": "7",
 		},
+		deployment,
 	)
 }

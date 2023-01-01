@@ -32,11 +32,15 @@ func TestKnockRoomsInPublicRoomsDirectoryInMSC3787Room(t *testing.T) {
 
 // See TestCannotSendKnockViaSendKnock
 func TestCannotSendKnockViaSendKnockInMSC3787Room(t *testing.T) {
+	deployment := Deploy(t, b.BlueprintAlice)
+	defer deployment.Destroy(t)
+
 	testValidationForSendMembershipEndpoint(t, "/_matrix/federation/v1/send_knock", "knock",
 		map[string]interface{}{
 			"preset":       "public_chat",
 			"room_version": msc3787RoomVersion,
 		},
+		deployment,
 	)
 }
 
