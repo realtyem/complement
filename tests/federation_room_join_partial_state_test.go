@@ -266,6 +266,7 @@ func TestPartialStateJoin(t *testing.T) {
 		// test that a regular /sync request made during a partial-state /send_join
 		// request blocks until the state is correctly synced.
 		t.Run("SyncBlocksDuringPartialStateJoin", func(t *testing.T) {
+			t.Parallel()
 			alice := deployment.RegisterUser(t, "hs1", "t1alice", "secret", false)
 
 			server := createTestServer(t, deployment)
@@ -328,6 +329,7 @@ func TestPartialStateJoin(t *testing.T) {
 
 		// when Alice does a lazy-loading sync, she should see the room immediately
 		t.Run("CanLazyLoadingSyncDuringPartialStateJoin", func(t *testing.T) {
+			t.Parallel()
 			alice := deployment.RegisterUser(t, "hs1", "t2alice", "secret", false)
 
 			server := createTestServer(t, deployment)
@@ -348,6 +350,7 @@ func TestPartialStateJoin(t *testing.T) {
 
 		// we should be able to send events in the room, during the resync
 		t.Run("CanSendEventsDuringPartialStateJoin", func(t *testing.T) {
+			t.Parallel()
 			alice := deployment.RegisterUser(t, "hs1", "t3alice", "secret", false)
 
 			pdusChannel := make(chan *gomatrixserverlib.Event)
@@ -392,6 +395,7 @@ func TestPartialStateJoin(t *testing.T) {
 
 		// we should be able to receive typing EDU over federation during the resync
 		t.Run("CanReceiveTypingDuringPartialStateJoin", func(t *testing.T) {
+			t.Parallel()
 			alice := deployment.RegisterUser(t, "hs1", "t42alice", "secret", false)
 
 			server := createTestServer(t, deployment)
@@ -472,6 +476,7 @@ func TestPartialStateJoin(t *testing.T) {
 		t.Run("CanReceivePresenceDuringPartialStateJoin", func(t *testing.T) {
 			// See https://github.com/matrix-org/synapse/issues/13008")
 			t.Skip("Presence EDUs are currently dropped during a resync")
+			t.Parallel()
 			alice := deployment.RegisterUser(t, "hs1", "t43alice", "secret", false)
 
 			server := createTestServer(t, deployment)
@@ -517,6 +522,7 @@ func TestPartialStateJoin(t *testing.T) {
 
 		// we should be able to receive to_device EDU over federation during the resync
 		t.Run("CanReceiveToDeviceDuringPartialStateJoin", func(t *testing.T) {
+			t.Parallel()
 			alice := deployment.RegisterUser(t, "hs1", "t44alice", "secret", false)
 
 			server := createTestServer(t, deployment)
@@ -565,6 +571,7 @@ func TestPartialStateJoin(t *testing.T) {
 
 		// we should be able to receive receipt EDU over federation during the resync
 		t.Run("CanReceiveReceiptDuringPartialStateJoin", func(t *testing.T) {
+			t.Parallel()
 			alice := deployment.RegisterUser(t, "hs1", "t45alice", "secret", false)
 
 			server := createTestServer(t, deployment)
@@ -616,6 +623,7 @@ func TestPartialStateJoin(t *testing.T) {
 
 		// we should be able to receive device list update EDU over federation during the resync
 		t.Run("CanReceiveDeviceListUpdateDuringPartialStateJoin", func(t *testing.T) {
+			t.Parallel()
 			alice := deployment.RegisterUser(t, "hs1", "t46alice", "secret", false)
 
 			server := createTestServer(t, deployment)
@@ -665,6 +673,7 @@ func TestPartialStateJoin(t *testing.T) {
 
 		// we should be able to receive signing key update EDU over federation during the resync
 		t.Run("CanReceiveSigningKeyUpdateDuringPartialStateJoin", func(t *testing.T) {
+			t.Parallel()
 			alice := deployment.RegisterUser(t, "hs1", "t47alice", "secret", false)
 
 			server := createTestServer(t, deployment)
@@ -691,6 +700,7 @@ func TestPartialStateJoin(t *testing.T) {
 
 		// we should be able to receive events over federation during the resync
 		t.Run("CanReceiveEventsDuringPartialStateJoin", func(t *testing.T) {
+			t.Parallel()
 			alice := deployment.RegisterUser(t, "hs1", "t4alice", "secret", false)
 			syncToken := getSyncToken(t, alice)
 
@@ -713,6 +723,7 @@ func TestPartialStateJoin(t *testing.T) {
 
 		// we should be able to receive events with a missing prev event over federation during the resync
 		t.Run("CanReceiveEventsWithMissingParentsDuringPartialStateJoin", func(t *testing.T) {
+			t.Parallel()
 			alice := deployment.RegisterUser(t, "hs1", "t5alice", "secret", false)
 			syncToken := getSyncToken(t, alice)
 
@@ -751,6 +762,7 @@ func TestPartialStateJoin(t *testing.T) {
 
 		// we should be able to receive events with partially missing prev events over federation during the resync
 		t.Run("CanReceiveEventsWithHalfMissingParentsDuringPartialStateJoin", func(t *testing.T) {
+			t.Parallel()
 			alice := deployment.RegisterUser(t, "hs1", "t6alice", "secret", false)
 			syncToken := getSyncToken(t, alice)
 
@@ -792,6 +804,7 @@ func TestPartialStateJoin(t *testing.T) {
 		// we should be able to receive events with a missing prev event, with half missing prev events,
 		// over federation during the resync
 		t.Run("CanReceiveEventsWithHalfMissingGrandparentsDuringPartialStateJoin", func(t *testing.T) {
+			t.Parallel()
 			alice := deployment.RegisterUser(t, "hs1", "t7alice", "secret", false)
 			syncToken := getSyncToken(t, alice)
 
@@ -837,6 +850,7 @@ func TestPartialStateJoin(t *testing.T) {
 		// initial sync must return memberships of event senders even when they aren't present in the
 		// partial room state.
 		t.Run("Lazy-loading initial sync includes remote memberships during partial state join", func(t *testing.T) {
+			t.Parallel()
 			alice := deployment.RegisterUser(t, "hs1", "t8alice", "secret", false)
 
 			server := createTestServer(t, deployment)
@@ -876,6 +890,7 @@ func TestPartialStateJoin(t *testing.T) {
 		// gappy sync must return memberships of event senders even when they aren't present in the
 		// partial room state.
 		t.Run("Lazy-loading gappy sync includes remote memberships during partial state join", func(t *testing.T) {
+			t.Parallel()
 			alice := deployment.RegisterUser(t, "hs1", "t9alice", "secret", false)
 			syncToken := getSyncToken(t, alice)
 
@@ -946,6 +961,7 @@ func TestPartialStateJoin(t *testing.T) {
 		// incremental sync must return memberships of event senders even when they aren't present in
 		// the partial room state.
 		t.Run("Lazy-loading incremental sync includes remote memberships during partial state join", func(t *testing.T) {
+			t.Parallel()
 			alice := deployment.RegisterUser(t, "hs1", "t10alice", "secret", false)
 			syncToken := getSyncToken(t, alice)
 
@@ -994,6 +1010,7 @@ func TestPartialStateJoin(t *testing.T) {
 		// a request to (client-side) /members?at= should block until the (federation) /state request completes
 		// TODO(faster_joins): also need to test /state, and /members without an `at`, which follow a different path
 		t.Run("MembersRequestBlocksDuringPartialStateJoin", func(t *testing.T) {
+			t.Parallel()
 			alice := deployment.RegisterUser(t, "hs1", "t11alice", "secret", false)
 
 			server := createTestServer(t, deployment)
@@ -1053,6 +1070,7 @@ func TestPartialStateJoin(t *testing.T) {
 		// followed by a gappy sync. the gappy sync should include the correct member state,
 		// since it was not sent on the previous sync.
 		t.Run("GappySyncAfterPartialStateSynced", func(t *testing.T) {
+			t.Parallel()
 			alice := deployment.RegisterUser(t, "hs1", "t13alice", "secret", false)
 
 			server := createTestServer(t, deployment)
@@ -1147,6 +1165,7 @@ func TestPartialStateJoin(t *testing.T) {
 		// and they then get de-outliered as partial state events, we would get stuck in
 		// an infinite loop of de-partial-stating.
 		t.Run("Resync completes even when events arrive before their prev_events", func(t *testing.T) {
+			t.Parallel()
 			alice := deployment.RegisterUser(t, "hs1", "t14alice", "secret", false)
 			syncToken := getSyncToken(t, alice)
 
@@ -1257,6 +1276,7 @@ func TestPartialStateJoin(t *testing.T) {
 		// test that any rejected events that are sent during the partial-state phase
 		// do not suddenly become un-rejected during the resync
 		t.Run("Rejected events remain rejected after resync", func(t *testing.T) {
+			t.Parallel()
 			alice := deployment.RegisterUser(t, "hs1", "t15alice", "secret", false)
 			syncToken := getSyncToken(t, alice)
 
@@ -1326,6 +1346,7 @@ func TestPartialStateJoin(t *testing.T) {
 		})
 
 		t.Run("State accepted incorrectly", func(t *testing.T) {
+			t.Parallel()
 			alice := deployment.RegisterUser(t, "hs1", "t16alice", "secret", false)
 			syncToken := getSyncToken(t, alice)
 			server := createTestServer(t, deployment)
@@ -1404,6 +1425,7 @@ func TestPartialStateJoin(t *testing.T) {
 		})
 
 		t.Run("State rejected incorrectly", func(t *testing.T) {
+			t.Parallel()
 			alice := deployment.RegisterUser(t, "hs1", "t17alice", "secret", false)
 			syncToken := getSyncToken(t, alice)
 			server := createTestServer(t, deployment)
@@ -1522,6 +1544,7 @@ func TestPartialStateJoin(t *testing.T) {
 		// when the server is in the middle of a partial state join, it should not accept
 		// /make_join because it can't give a full answer.
 		t.Run("Rejects make_join during partial join", func(t *testing.T) {
+			t.Parallel()
 			// In this test, we have 3 homeservers:
 			//   hs1 (the server under test) with @t18alice:hs1
 			//     This is the server that will be in the middle of a partial join.
@@ -1571,6 +1594,7 @@ func TestPartialStateJoin(t *testing.T) {
 		// when the server is in the middle of a partial state join, it should not accept
 		// /send_join because it can't give a full answer.
 		t.Run("Rejects send_join during partial join", func(t *testing.T) {
+			t.Parallel()
 			// In this test, we have 3 homeservers:
 			//   hs1 (the server under test) with @t19alice:hs1
 			//     This is the server that will be in the middle of a partial join.
@@ -1637,6 +1661,7 @@ func TestPartialStateJoin(t *testing.T) {
 		// test that a /joined_members request made during a partial-state /send_join
 		// request blocks until the state is correctly synced.
 		t.Run("joined_members blocks during partial state join", func(t *testing.T) {
+			t.Parallel()
 			alice := deployment.RegisterUser(t, "hs1", "t20alice", "secret", false)
 
 			server := createTestServer(t, deployment)
@@ -1695,6 +1720,7 @@ func TestPartialStateJoin(t *testing.T) {
 		// when the server is in the middle of a partial state join, it should not accept
 		// /make_knock because it can't give a full answer.
 		t.Run("Rejects make_knock during partial join", func(t *testing.T) {
+			t.Parallel()
 			// In this test, we have 3 homeservers:
 			//   hs1 (the server under test) with @t21alice:hs1
 			//     This is the server that will be in the middle of a partial join.
@@ -1744,6 +1770,7 @@ func TestPartialStateJoin(t *testing.T) {
 		// when the server is in the middle of a partial state join, it should not accept
 		// /send_knock because it can't give a full answer.
 		t.Run("Rejects send_knock during partial join", func(t *testing.T) {
+			t.Parallel()
 			// In this test, we have 3 homeservers:
 			//   hs1 (the server under test) with @t22alice:hs1
 			//     This is the server that will be in the middle of a partial join.
@@ -1811,6 +1838,7 @@ func TestPartialStateJoin(t *testing.T) {
 		// b) querying that alias returns at least the servers we were told
 		// about in the /send_join response.
 		t.Run("Room aliases can be added and queried during a resync", func(t *testing.T) {
+			t.Parallel()
 			// Alice begins a partial join to a room.
 			alice := deployment.RegisterUser(t, "hs1", "t40alice", "secret", false)
 			server := createTestServer(t, deployment)
@@ -1862,6 +1890,7 @@ func TestPartialStateJoin(t *testing.T) {
 		// Test that you can delete a room alias during a resync that you added during
 		// the resync.
 		t.Run("Room aliases can be added and deleted during a resync", func(t *testing.T) {
+			t.Parallel()
 			// Alice begins a partial join to a room.
 			alice := deployment.RegisterUser(t, "hs1", "t41alice", "secret", false)
 			server := createTestServer(t, deployment)
