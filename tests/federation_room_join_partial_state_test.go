@@ -247,9 +247,7 @@ func TestPartialStateJoin(t *testing.T) {
 
 	// we should be able to receive typing EDU over federation during the resync
 	t.Run("CanReceiveTypingDuringPartialStateJoin", func(t *testing.T) {
-		deployment := Deploy(t, b.BlueprintAlice)
-		defer deployment.Destroy(t)
-		alice := deployment.Client(t, "hs1", "@alice:hs1")
+		alice := deployment.RegisterUser(t, "hs1", "t42alice", "secret", false)
 
 		server := createTestServer(t, deployment)
 		cancel := server.Listen()
@@ -329,9 +327,7 @@ func TestPartialStateJoin(t *testing.T) {
 	t.Run("CanReceivePresenceDuringPartialStateJoin", func(t *testing.T) {
 		// See https://github.com/matrix-org/synapse/issues/13008")
 		t.Skip("Presence EDUs are currently dropped during a resync")
-		deployment := Deploy(t, b.BlueprintAlice)
-		defer deployment.Destroy(t)
-		alice := deployment.Client(t, "hs1", "@alice:hs1")
+		alice := deployment.RegisterUser(t, "hs1", "t43alice", "secret", false)
 
 		server := createTestServer(t, deployment)
 		cancel := server.Listen()
@@ -376,9 +372,7 @@ func TestPartialStateJoin(t *testing.T) {
 
 	// we should be able to receive to_device EDU over federation during the resync
 	t.Run("CanReceiveToDeviceDuringPartialStateJoin", func(t *testing.T) {
-		deployment := Deploy(t, b.BlueprintAlice)
-		defer deployment.Destroy(t)
-		alice := deployment.Client(t, "hs1", "@alice:hs1")
+		alice := deployment.RegisterUser(t, "hs1", "t44alice", "secret", false)
 
 		server := createTestServer(t, deployment)
 		cancel := server.Listen()
@@ -426,9 +420,7 @@ func TestPartialStateJoin(t *testing.T) {
 
 	// we should be able to receive receipt EDU over federation during the resync
 	t.Run("CanReceiveReceiptDuringPartialStateJoin", func(t *testing.T) {
-		deployment := Deploy(t, b.BlueprintAlice)
-		defer deployment.Destroy(t)
-		alice := deployment.Client(t, "hs1", "@alice:hs1")
+		alice := deployment.RegisterUser(t, "hs1", "t45alice", "secret", false)
 
 		server := createTestServer(t, deployment)
 		cancel := server.Listen()
@@ -479,9 +471,7 @@ func TestPartialStateJoin(t *testing.T) {
 
 	// we should be able to receive device list update EDU over federation during the resync
 	t.Run("CanReceiveDeviceListUpdateDuringPartialStateJoin", func(t *testing.T) {
-		deployment := Deploy(t, b.BlueprintAlice)
-		defer deployment.Destroy(t)
-		alice := deployment.Client(t, "hs1", "@alice:hs1")
+		alice := deployment.RegisterUser(t, "hs1", "t46alice", "secret", false)
 
 		server := createTestServer(t, deployment)
 		cancel := server.Listen()
@@ -530,9 +520,7 @@ func TestPartialStateJoin(t *testing.T) {
 
 	// we should be able to receive signing key update EDU over federation during the resync
 	t.Run("CanReceiveSigningKeyUpdateDuringPartialStateJoin", func(t *testing.T) {
-		deployment := Deploy(t, b.BlueprintAlice)
-		defer deployment.Destroy(t)
-		alice := deployment.Client(t, "hs1", "@alice:hs1")
+		alice := deployment.RegisterUser(t, "hs1", "t47alice", "secret", false)
 
 		server := createTestServer(t, deployment)
 		cancel := server.Listen()
@@ -1816,7 +1804,7 @@ func TestPartialStateJoin(t *testing.T) {
 			t.Errorf("SendKnock: non-HTTPError: %v", err)
 		}
 	})
-	t.Run("Outgoing device list updates", func(t *testing.T) {
+	t.Run("Outgoing device list updates(parallel)", func(t *testing.T) {
 		// setupOutgoingDeviceListUpdateTest sets up two complement homeservers.
 		// A room is created on the first complement server, containing only local users.
 		// Returns channels for device list updates arriving at the complement homeservers, which
@@ -1935,6 +1923,7 @@ func TestPartialStateJoin(t *testing.T) {
 		// test that device list updates are sent to the remote homeservers listed in the
 		// `/send_join` response in a room with partial state.
 		t.Run("Device list updates reach all servers in partial state rooms", func(t *testing.T) {
+			t.Parallel()
 			alice, server1, server2, deviceListUpdateChannel1, deviceListUpdateChannel2, room, cleanup := setupOutgoingDeviceListUpdateTest(t, deployment, "t23alice")
 			defer cleanup()
 
@@ -1966,6 +1955,7 @@ func TestPartialStateJoin(t *testing.T) {
 		// test that device list updates are additionally sent to remote homeservers that join after
 		// the local homeserver.
 		t.Run("Device list updates reach newly joined servers in partial state rooms", func(t *testing.T) {
+			t.Parallel()
 			alice, server1, server2, deviceListUpdateChannel1, deviceListUpdateChannel2, room, cleanup := setupOutgoingDeviceListUpdateTest(t, deployment, "t24alice")
 			defer cleanup()
 
@@ -2010,6 +2000,7 @@ func TestPartialStateJoin(t *testing.T) {
 		// under test must do so, as it has no way of knowing that a remote homeserver has no more
 		// users in the room.
 		t.Run("Device list updates no longer reach departed servers after partial state join completes", func(t *testing.T) {
+			t.Parallel()
 			alice, server1, server2, deviceListUpdateChannel1, deviceListUpdateChannel2, room, cleanup := setupOutgoingDeviceListUpdateTest(t, deployment, "t25alice")
 			defer cleanup()
 
@@ -2194,6 +2185,7 @@ func TestPartialStateJoin(t *testing.T) {
 		// test that device list updates are sent to remote homeservers incorrectly believed not to
 		// be in a room with partial state once the partial state join completes.
 		t.Run("Device list updates reach incorrectly kicked servers once partial state join completes", func(t *testing.T) {
+			t.Parallel()
 			alice, server1, server2, deviceListUpdateChannel1, deviceListUpdateChannel2, room, cleanup := setupOutgoingDeviceListUpdateTest(t, deployment, "t26alice")
 			defer cleanup()
 
@@ -2215,6 +2207,7 @@ func TestPartialStateJoin(t *testing.T) {
 		// be in a room with partial state once the partial state join completes, even if the remote
 		// homeserver leaves the room beforehand.
 		t.Run("Device list updates reach incorrectly kicked servers once partial state join completes even though remote server left room", func(t *testing.T) {
+			t.Parallel()
 			alice, server1, server2, deviceListUpdateChannel1, deviceListUpdateChannel2, room, cleanup := setupOutgoingDeviceListUpdateTest(t, deployment, "t27alice")
 			defer cleanup()
 
@@ -2244,6 +2237,7 @@ func TestPartialStateJoin(t *testing.T) {
 		// test that device list updates are sent to remote homeservers incorrectly omitted from the
 		// `/send_join` response once the partial state join completes.
 		t.Run("Device list updates reach incorrectly absent servers once partial state join completes", func(t *testing.T) {
+			t.Parallel()
 			alice, server1, server2, deviceListUpdateChannel1, deviceListUpdateChannel2, room, cleanup := setupOutgoingDeviceListUpdateTest(
 				t, deployment, "t28alice", handleSendJoinRequestsWithIncompleteServersInRoom,
 			)
@@ -2268,6 +2262,7 @@ func TestPartialStateJoin(t *testing.T) {
 		// `/send_join` response once the partial state join completes, even if the remote
 		// homeserver leaves the room beforehand.
 		t.Run("Device list updates reach incorrectly absent servers once partial state join completes even though remote server left room", func(t *testing.T) {
+			t.Parallel()
 			alice, server1, server2, deviceListUpdateChannel1, deviceListUpdateChannel2, room, cleanup := setupOutgoingDeviceListUpdateTest(
 				t, deployment, "t29alice", handleSendJoinRequestsWithIncompleteServersInRoom,
 			)
@@ -2295,7 +2290,7 @@ func TestPartialStateJoin(t *testing.T) {
 	//  * local users are told about potential device list changes in `/sync`'s
 	//    `device_lists.changed/left`
 	//  * local users are told about potential device list changes in `/keys/changes`.
-	t.Run("Device list tracking", func(t *testing.T) {
+	t.Run("Device list tracking(parallel)", func(t *testing.T) {
 		// setupDeviceListCachingTest sets up a complement homeserver.
 		// A room is created on the complement server, containing only local users.
 		// Returns a channel for device list requests arriving at the complement homeserver, which
@@ -2564,6 +2559,7 @@ func TestPartialStateJoin(t *testing.T) {
 		//  * device list updates received while the room has partial state are sent to clients once
 		//    fully joined.
 		t.Run("Device list tracking for pre-existing members in partial state room", func(t *testing.T) {
+			t.Parallel()
 			alice, server, userDevicesChannel, room, sendDeviceListUpdate, cleanup := setupDeviceListCachingTest(t, deployment, "t30alice")
 			defer cleanup()
 
@@ -2614,6 +2610,7 @@ func TestPartialStateJoin(t *testing.T) {
 		// test device list tracking when a pre-existing member in a room with partial state joins
 		// another shared room and starts being tracked for real.
 		t.Run("Device list tracking when pre-existing members in partial state room join another shared room", func(t *testing.T) {
+			t.Parallel()
 			alice, server, _, room, sendDeviceListUpdate, cleanup := setupDeviceListCachingTest(t, deployment, "t31alice")
 			defer cleanup()
 
@@ -2657,6 +2654,7 @@ func TestPartialStateJoin(t *testing.T) {
 		// test device list tracking for users that join after the local homeserver.
 		// It is expected that device list tracking works as normal for such users.
 		t.Run("Device list tracked for new members in partial state room", func(t *testing.T) {
+			t.Parallel()
 			alice, server, userDevicesChannel, room, sendDeviceListUpdate, cleanup := setupDeviceListCachingTest(t, deployment, "t32alice")
 			defer cleanup()
 
@@ -2706,6 +2704,7 @@ func TestPartialStateJoin(t *testing.T) {
 		// Similar to the previous test, except @elsie leaves before the partial state join
 		// completes.
 		t.Run("Device list no longer tracked when new member leaves partial state room", func(t *testing.T) {
+			t.Parallel()
 			alice, server, userDevicesChannel, room, _, cleanup := setupDeviceListCachingTest(t, deployment, "t33alice")
 			defer cleanup()
 
@@ -2750,6 +2749,7 @@ func TestPartialStateJoin(t *testing.T) {
 		t.Run("Device list no longer tracked when leaving partial state room", func(t *testing.T) {
 			// Skipped until https://github.com/matrix-org/synapse/issues/12802 has been addressed.
 			t.Skip("Cannot yet leave a room during resync")
+			t.Parallel()
 
 			alice, server, userDevicesChannel, room, _, cleanup := setupDeviceListCachingTest(t, deployment, "t34alice")
 			defer cleanup()
@@ -2792,6 +2792,7 @@ func TestPartialStateJoin(t *testing.T) {
 		t.Run("Device list no longer tracked when failing to complete partial state join", func(t *testing.T) {
 			// Skipped until https://github.com/matrix-org/synapse/issues/13000 has been addressed.
 			t.Skip("Cannot yet abort a partial state join")
+			t.Parallel()
 
 			alice, server, userDevicesChannel, room, _, cleanup := setupDeviceListCachingTest(t, deployment, "t35alice")
 			defer cleanup()
@@ -2928,6 +2929,7 @@ func TestPartialStateJoin(t *testing.T) {
 		// test that device lists stop being tracked when it is discovered that a remote user is not
 		// in a room once a partial state join completes.
 		t.Run("Device list no longer tracked for user incorrectly believed to be in room", func(t *testing.T) {
+			t.Parallel()
 			alice, server, userDevicesChannel, room, _, cleanup := setupDeviceListCachingTest(t, deployment, "t36alice")
 			defer cleanup()
 
@@ -2961,6 +2963,7 @@ func TestPartialStateJoin(t *testing.T) {
 		t.Run("Device list tracking for user incorrectly believed to be in room when they rejoin before partial state join completes", func(t *testing.T) {
 			// Tracked in https://github.com/matrix-org/synapse/issues/13887.
 			t.Skip("This edge case is being ignored for now.")
+			t.Parallel()
 
 			alice, server, userDevicesChannel, room, _, cleanup := setupDeviceListCachingTest(t, deployment, "t37alice")
 			defer cleanup()
@@ -3004,6 +3007,7 @@ func TestPartialStateJoin(t *testing.T) {
 		// completes, so that their device list is being tracked again at the time we test the
 		// device list cache.
 		t.Run("Device list tracking for user incorrectly believed to be in room when they rejoin after partial state join completes", func(t *testing.T) {
+			t.Parallel()
 			alice, server, userDevicesChannel, room, _, cleanup := setupDeviceListCachingTest(t, deployment, "t38alice")
 			defer cleanup()
 
@@ -3043,6 +3047,7 @@ func TestPartialStateJoin(t *testing.T) {
 		t.Run("Device list tracking for user incorrectly believed to be in room when they join another shared room before partial state join completes", func(t *testing.T) {
 			// Tracked in https://github.com/matrix-org/synapse/issues/13887.
 			t.Skip("This edge case is being ignored for now.")
+			t.Parallel()
 
 			alice, server, userDevicesChannel, room, _, cleanup := setupDeviceListCachingTest(t, deployment, "t39alice")
 			defer cleanup()
