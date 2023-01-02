@@ -17,14 +17,15 @@ import (
 )
 
 func TestDirectMessaging(t *testing.T) {
-	t.Run("sequential", func(t *testing.T) {
-		deployment := Deploy(t, b.BlueprintOneToOneRoom)
-		defer deployment.Destroy(t)
+	deployment := Deploy(t, b.BlueprintOneToOneRoom)
+	defer deployment.Destroy(t)
 
+	t.Run("parallel", func(t *testing.T) {
 		// Test that a client can write `m.direct` account data and get told about updates to that event.
 		// Requires a functioning account data implementation.
 		// users needed: @alice:hs1 and @bob:hs1
 		t.Run("WriteMDirectAccountData", func(t *testing.T) {
+			t.Parallel()
 			defer func() {
 				// additional logging to debug https://github.com/matrix-org/synapse/issues/13334
 				t.Logf("%s: TestWriteMDirectAccountData complete: destroying HS deployment", time.Now())
@@ -80,6 +81,7 @@ func TestDirectMessaging(t *testing.T) {
 		// are on the same homeserver.
 		// users needed: @alice:hs1 and @bob:hs1
 		t.Run("IsDirectFlagLocal", func(t *testing.T) {
+			t.Parallel()
 			alice := deployment.Client(t, "hs1", "@alice:hs1")
 			bob := deployment.Client(t, "hs1", "@bob:hs1")
 			roomID := alice.CreateRoom(t, map[string]interface{}{
@@ -111,6 +113,7 @@ func TestDirectMessaging(t *testing.T) {
 		// are on different homeservers.
 		// users needed: @alice:hs1 and "fake" @zed(was @bob)
 		t.Run("IsDirectFlagFederation", func(t *testing.T) {
+			t.Parallel()
 			srv := federation.NewServer(t, deployment,
 				federation.HandleKeyRequests(),
 				federation.HandleMakeSendJoinRequests(),
