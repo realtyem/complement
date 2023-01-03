@@ -427,6 +427,7 @@ func waitForPorts(ctx context.Context, docker *client.Client, containerID string
 		if err == nil {
 			break
 		}
+		time.Sleep(20 * time.Millisecond)
 	}
 	return baseURL, fedBaseURL, nil
 }
