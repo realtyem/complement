@@ -16,35 +16,42 @@ import (
 
 // TODO: add JPEG testing
 
-// sytest: POSTed media can be thumbnailed
-func TestLocalPngThumbnail(t *testing.T) {
-	deployment := Deploy(t, b.BlueprintAlice)
-	defer deployment.Destroy(t)
-
-	alice := deployment.Client(t, "hs1", "@alice:hs1")
-
-	fileName := "test.png"
-	contentType := "image/png"
-
-	uri := alice.UploadContent(t, data.LargePng, fileName, contentType)
-
-	fetchAndValidateThumbnail(t, alice, uri)
-}
-
-// sytest: Remote media can be thumbnailed
-func TestRemotePngThumbnail(t *testing.T) {
+func TestThumbnail(t *testing.T) {
 	deployment := Deploy(t, b.BlueprintFederationOneToOneRoom)
 	defer deployment.Destroy(t)
 
-	alice := deployment.Client(t, "hs1", "@alice:hs1")
-	bob := deployment.Client(t, "hs2", "@bob:hs2")
+	t.Run("parallel", func(t *testing.T) {
+		// sytest: POSTed media can be thumbnailed
+		t.Run("LocalPng", func(t *testing.T) {
+			// formerly TestLocalPngThumbnail
+			// users needed: @alice:hs1
+			t.Parallel()
+			alice := deployment.Client(t, "hs1", "@alice:hs1")
 
-	fileName := "test.png"
-	contentType := "image/png"
+			fileName := "localtest.png"
+			contentType := "image/png"
 
-	uri := alice.UploadContent(t, data.LargePng, fileName, contentType)
+			uri := alice.UploadContent(t, data.LargePng, fileName, contentType)
 
-	fetchAndValidateThumbnail(t, bob, uri)
+			fetchAndValidateThumbnail(t, alice, uri)
+		})
+
+		// sytest: Remote media can be thumbnailed
+		t.Run("RemotePng", func(t *testing.T) {
+			// formerly TestRemotePngThumbnail
+			// users needed: @alice:hs1 and @bob:hs2
+			t.Parallel()
+			alice := deployment.Client(t, "hs1", "@alice:hs1")
+			bob := deployment.Client(t, "hs2", "@bob:hs2")
+
+			fileName := "remotetest.png"
+			contentType := "image/png"
+
+			uri := alice.UploadContent(t, data.LargePng, fileName, contentType)
+
+			fetchAndValidateThumbnail(t, bob, uri)
+		})
+	})
 }
 
 func fetchAndValidateThumbnail(t *testing.T, c *client.CSAPI, mxcUri string) {
