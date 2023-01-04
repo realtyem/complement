@@ -656,7 +656,7 @@ func NewLoggedClient(t *testing.T, hsName string, cli *http.Client) *http.Client
 	t.Helper()
 	if cli == nil {
 		cli = &http.Client{
-			Timeout: 30 * time.Second,
+			Timeout: 60 * time.Second,
 		}
 	}
 	transport := cli.Transport
