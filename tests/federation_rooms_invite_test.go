@@ -16,12 +16,14 @@ func TestFederationRoomsInvite(t *testing.T) {
 	deployment := Deploy(t, b.BlueprintFederationOneToOneRoom)
 	defer deployment.Destroy(t)
 
+	var userpassword string = "password1337"
+
 	t.Run("Parallel", func(t *testing.T) {
 		// sytest: Invited user can reject invite over federation
 		t.Run("Invited user can reject invite over federation", func(t *testing.T) {
 			t.Parallel()
-			alice := deployment.Client(t, "hs1", "@alice:hs1")
-			bob := deployment.Client(t, "hs2", "@bob:hs2")
+			alice := deployment.RegisterUser(t, "hs1", "T01alice", userpassword, false)
+			bob := deployment.RegisterUser(t, "hs2", "T01bob", userpassword, false)
 
 			roomID := alice.CreateRoom(t, map[string]interface{}{
 				"preset": "private_chat",
@@ -35,8 +37,8 @@ func TestFederationRoomsInvite(t *testing.T) {
 		// sytest: Invited user can reject invite over federation several times
 		t.Run("Invited user can reject invite over federation several times", func(t *testing.T) {
 			t.Parallel()
-			alice := deployment.Client(t, "hs1", "@alice:hs1")
-			bob := deployment.Client(t, "hs2", "@bob:hs2")
+			alice := deployment.RegisterUser(t, "hs1", "T02alice", userpassword, false)
+			bob := deployment.RegisterUser(t, "hs2", "T02bob", userpassword, false)
 
 			roomID := alice.CreateRoom(t, map[string]interface{}{
 				"preset": "private_chat",
@@ -52,8 +54,8 @@ func TestFederationRoomsInvite(t *testing.T) {
 		// sytest: Invited user can reject invite over federation for empty room
 		t.Run("Invited user can reject invite over federation for empty room", func(t *testing.T) {
 			t.Parallel()
-			alice := deployment.Client(t, "hs1", "@alice:hs1")
-			bob := deployment.Client(t, "hs2", "@bob:hs2")
+			alice := deployment.RegisterUser(t, "hs1", "T03alice", userpassword, false)
+			bob := deployment.RegisterUser(t, "hs2", "T03bob", userpassword, false)
 
 			roomID := alice.CreateRoom(t, map[string]interface{}{
 				"preset": "private_chat",
@@ -70,8 +72,8 @@ func TestFederationRoomsInvite(t *testing.T) {
 		// sytest: Remote invited user can see room metadata
 		t.Run("Remote invited user can see room metadata", func(t *testing.T) {
 			t.Parallel()
-			alice := deployment.Client(t, "hs1", "@alice:hs1")
-			bob := deployment.Client(t, "hs2", "@bob:hs2")
+			alice := deployment.RegisterUser(t, "hs1", "T04alice", userpassword, false)
+			bob := deployment.RegisterUser(t, "hs2", "T04bob", userpassword, false)
 
 			roomID := alice.CreateRoom(t, map[string]interface{}{
 				"preset": "private_chat",
@@ -94,8 +96,8 @@ func TestFederationRoomsInvite(t *testing.T) {
 		})
 
 		t.Run("Invited user has 'is_direct' flag in prev_content after joining", func(t *testing.T) {
-			alice := deployment.Client(t, "hs1", "@alice:hs1")
-			bob := deployment.Client(t, "hs2", "@bob:hs2")
+			alice := deployment.RegisterUser(t, "hs1", "T05alice", userpassword, false)
+			bob := deployment.RegisterUser(t, "hs2", "T05bob", userpassword, false)
 
 			roomID := alice.CreateRoom(t, map[string]interface{}{
 				"preset": "private_chat",
