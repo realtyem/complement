@@ -37,7 +37,7 @@ import (
 func TestPartialStateJoin(t *testing.T) {
 	// This set of tests is now run largely in parallel. As such, some requests are taking longer to complete. Allow
 	// for more time to process by adjusting this variable.
-	var concurrencyTimeout time.Duration = 2
+	var concurrencyTimeout time.Duration = 3
 	// createTestServer spins up a federation server suitable for the tests in this file
 	createTestServer := func(t *testing.T, deployment *docker.Deployment, opts ...func(*federation.Server)) *federation.Server {
 		t.Helper()
