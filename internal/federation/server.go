@@ -53,7 +53,7 @@ type Server struct {
 	rooms                 map[string]*ServerRoom
 	keyRing               *gomatrixserverlib.KeyRing
 
-	mutex sync.RWMutex
+	mutex sync.Mutex
 }
 
 // NewServer creates a new federation server with configured options.
@@ -130,36 +130,28 @@ func NewServer(t *testing.T, deployment *docker.Deployment, opts ...func(*Server
 // Listen() will select a random OS-provided high-numbered port to listen on, which then needs to be
 // retrofitted into the server name so containers know how to route to it.
 func (s *Server) ServerName() string {
-	s.mutex.RLock()
 	if !s.listening {
 		s.t.Fatalf("ServerName() called before Listen() - this is not supported because Listen() chooses a high-numbered port and thus changes the server name. Ensure you Listen() first!")
 	}
-	srvName := s.serverName
-	s.mutex.RUnlock()
-	return srvName
+	return s.serverName
 }
 
 // UserID returns the complete user ID for the given localpart
 func (s *Server) UserID(localpart string) string {
-	s.mutex.RLock()
 	if !s.listening {
 		s.t.Fatalf("UserID() called before Listen() - this is not supported because Listen() chooses a high-numbered port and thus changes the server name and thus changes the user ID. Ensure you Listen() first!")
 	}
-	userID := fmt.Sprintf("@%s:%s", localpart, s.serverName)
-	s.mutex.RUnlock()
-	return userID
+	return fmt.Sprintf("@%s:%s", localpart, s.serverName)
 }
 
 // MakeAliasMapping will create a mapping of room alias to room ID on this server. Returns the alias.
 // If this is the first time calling this function, a directory lookup handler will be added to
 // handle alias requests over federation.
 func (s *Server) MakeAliasMapping(aliasLocalpart, roomID string) string {
-	s.mutex.RLock()
 	if !s.listening {
 		s.t.Fatalf("MakeAliasMapping() called before Listen() - this is not supported because Listen() chooses a high-numbered port and thus changes the server name and thus changes the room alias. Ensure you Listen() first!")
 	}
 	alias := fmt.Sprintf("#%s:%s", aliasLocalpart, s.serverName)
-	s.mutex.RUnlock()
 	s.mutex.Lock()
 	s.aliases[alias] = roomID
 	s.mutex.Unlock()
@@ -170,7 +162,6 @@ func (s *Server) MakeAliasMapping(aliasLocalpart, roomID string) string {
 // MustMakeRoom will add a room to this server so it is accessible to other servers when prompted via federation.
 // The `events` will be added to this room. Returns the created room.
 func (s *Server) MustMakeRoom(t *testing.T, roomVer gomatrixserverlib.RoomVersion, events []b.Event) *ServerRoom {
-	s.mutex.RLock()
 	if !s.listening {
 		s.t.Fatalf("MustMakeRoom() called before Listen() - this is not supported because Listen() chooses a high-numbered port and thus changes the server name and thus changes the room ID. Ensure you Listen() first!")
 	}
@@ -180,16 +171,15 @@ func (s *Server) MustMakeRoom(t *testing.T, roomVer gomatrixserverlib.RoomVersio
 	//  * reduces noise when searching through logs and
 	//  * prevents homeservers from getting confused when multiple test cases re-use the same homeserver deployment.
 	roomID := fmt.Sprintf("!%d-%s:%s", len(s.rooms), util.RandomString(18), s.serverName)
-	s.mutex.RUnlock()
 	t.Logf("Creating room %s with version %s", roomID, roomVer)
 	room := newRoom(roomVer, roomID)
 
 	// sign all these events
-	s.mutex.Lock()
 	for _, ev := range events {
 		signedEvent := s.MustCreateEvent(t, room, ev)
 		room.AddEvent(signedEvent)
 	}
+	s.mutex.Lock()
 	s.rooms[roomID] = room
 	s.mutex.Unlock()
 	return room
@@ -199,11 +189,9 @@ func (s *Server) MustMakeRoom(t *testing.T, roomVer gomatrixserverlib.RoomVersio
 //
 // The requests will be routed according to the deployment map in `deployment`.
 func (s *Server) FederationClient(deployment *docker.Deployment) *gomatrixserverlib.FederationClient {
-	s.mutex.RLock()
 	if !s.listening {
 		s.t.Fatalf("FederationClient() called before Listen() - this is not supported because Listen() chooses a high-numbered port and thus changes the server name and thus changes the way federation requests are signed. Ensure you Listen() first!")
 	}
-	s.mutex.RUnlock()
 	f := gomatrixserverlib.NewFederationClient(
 		gomatrixserverlib.ServerName(s.serverName), s.KeyID, s.Priv,
 		gomatrixserverlib.WithTransport(&docker.RoundTripper{Deployment: deployment}),
@@ -388,9 +376,7 @@ func (s *Server) MustLeaveRoom(t *testing.T, deployment *docker.Deployment, remo
 	t.Helper()
 	fedClient := s.FederationClient(deployment)
 	var leaveEvent *gomatrixserverlib.Event
-	s.mutex.RLock()
 	room := s.rooms[roomID]
-	s.mutex.RUnlock()
 	if room == nil {
 		// e.g rejecting an invite
 		makeLeaveResp, err := fedClient.MakeLeave(context.Background(), remoteServer, roomID, userID)
@@ -419,7 +405,7 @@ func (s *Server) MustLeaveRoom(t *testing.T, deployment *docker.Deployment, remo
 	}
 	room.AddEvent(leaveEvent)
 	s.mutex.Lock()
-		s.rooms[roomID] = room
+	s.rooms[roomID] = room
 	s.mutex.Unlock()
 
 	t.Logf("Server.MustLeaveRoom left room ID %s", roomID)
@@ -430,11 +416,9 @@ func (s *Server) MustLeaveRoom(t *testing.T, deployment *docker.Deployment, remo
 func (s *Server) ValidFederationRequest(t *testing.T, handler func(fr *gomatrixserverlib.FederationRequest, pathParams map[string]string) util.JSONResponse) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		// Check federation signature
-		s.mutex.RLock()
 		fedReq, errResp := gomatrixserverlib.VerifyHTTPRequest(
 			req, time.Now(), gomatrixserverlib.ServerName(s.serverName), s.keyRing,
 		)
-		s.mutex.RUnlock()
 		if fedReq == nil {
 			t.Errorf(
 				"complement: ValidFederationRequest: HTTP Code %d. Invalid http request: %s",
@@ -479,10 +463,8 @@ func (s *Server) Listen() (cancel func()) {
 		s.t.Fatalf("ListenFederationServer: net.Listen failed: %s", err)
 	}
 	port := ln.Addr().(*net.TCPAddr).Port
-	s.mutex.Lock()
 	s.serverName += fmt.Sprintf(":%d", port)
 	s.listening = true
-	s.mutex.Unlock()
 
 	go func() {
 		defer ln.Close()
