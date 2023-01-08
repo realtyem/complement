@@ -53,7 +53,6 @@ type Server struct {
 	rooms                 map[string]*ServerRoom
 	keyRing               *gomatrixserverlib.KeyRing
 
-	mutex sync.Mutex
 }
 
 // NewServer creates a new federation server with configured options.
@@ -152,9 +151,7 @@ func (s *Server) MakeAliasMapping(aliasLocalpart, roomID string) string {
 		s.t.Fatalf("MakeAliasMapping() called before Listen() - this is not supported because Listen() chooses a high-numbered port and thus changes the server name and thus changes the room alias. Ensure you Listen() first!")
 	}
 	alias := fmt.Sprintf("#%s:%s", aliasLocalpart, s.serverName)
-	s.mutex.Lock()
 	s.aliases[alias] = roomID
-	s.mutex.Unlock()
 	HandleDirectoryLookups()(s)
 	return alias
 }
@@ -179,9 +176,7 @@ func (s *Server) MustMakeRoom(t *testing.T, roomVer gomatrixserverlib.RoomVersio
 		signedEvent := s.MustCreateEvent(t, room, ev)
 		room.AddEvent(signedEvent)
 	}
-	s.mutex.Lock()
 	s.rooms[roomID] = room
-	s.mutex.Unlock()
 	return room
 }
 
@@ -362,9 +357,7 @@ func (s *Server) MustJoinRoom(t *testing.T, deployment *docker.Deployment, remot
 		room.replaceCurrentState(ev)
 	}
 	room.AddEvent(joinEvent)
-	s.mutex.Lock()
 	s.rooms[roomID] = room
-	s.mutex.Unlock()
 
 	t.Logf("Server.MustJoinRoom joined room ID %s", roomID)
 
@@ -404,9 +397,7 @@ func (s *Server) MustLeaveRoom(t *testing.T, deployment *docker.Deployment, remo
 		t.Fatalf("MustLeaveRoom: send_leave failed: %v", err)
 	}
 	room.AddEvent(leaveEvent)
-	s.mutex.Lock()
 	s.rooms[roomID] = room
-	s.mutex.Unlock()
 
 	t.Logf("Server.MustLeaveRoom left room ID %s", roomID)
 }
