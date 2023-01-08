@@ -134,7 +134,7 @@ func (c *CSAPI) CreateRoom(t *testing.T, creationContent interface{}) string {
 
 // JoinRoom joins the room ID or alias given, else fails the test. Returns the room ID.
 func (c *CSAPI) JoinRoom(t *testing.T, roomIDOrAlias string, serverNames []string) string {
-	t.Helper()
+	//t.Helper()
 	// construct URL query parameters
 	query := make(url.Values, len(serverNames))
 	for _, serverName := range serverNames {
