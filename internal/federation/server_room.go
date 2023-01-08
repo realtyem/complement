@@ -19,7 +19,7 @@ type ServerRoom struct {
 	Timeline           []*gomatrixserverlib.Event
 	ForwardExtremities []string
 	Depth              int64
-	mutex sync.Mutex
+	mutex sync.RWMutex
 }
 
 // newRoom creates an empty room structure with no events
@@ -54,7 +54,9 @@ func (r *ServerRoom) AuthEvents(sn gomatrixserverlib.StateNeeded) (eventIDs []st
 	eventIDs = make([]string, 0)
 
 	appendIfExists := func(evType, stateKey string) {
+		r.mutex.RLock()
 		ev := r.CurrentState(evType, stateKey)
+		r.mutex.RUnlock()
 		if ev == nil {
 			return
 		}
@@ -87,20 +89,28 @@ func (r *ServerRoom) replaceCurrentState(ev *gomatrixserverlib.Event) {
 // CurrentState returns the state event for the given (type, state_key) or nil.
 func (r *ServerRoom) CurrentState(evType, stateKey string) *gomatrixserverlib.Event {
 	tuple := fmt.Sprintf("%s\x1f%s", evType, stateKey)
-	return r.State[tuple]
+	r.mutex.RLock()
+	returnValue := r.State[tuple]
+	r.mutex.RUnlock()
+	return returnValue
 }
 
 // AllCurrentState returns all the current state events
 func (r *ServerRoom) AllCurrentState() (events []*gomatrixserverlib.Event) {
+	r.mutex.RLock()
 	for _, ev := range r.State {
 		events = append(events, ev)
 	}
+	r.mutex.RUnlock()
 	return
 }
 
 // AuthChain returns all auth events for all events in the current state TODO: recursively
 func (r *ServerRoom) AuthChain() (chain []*gomatrixserverlib.Event) {
-	return r.AuthChainForEvents(r.AllCurrentState())
+	r.mutex.RLock()
+	returnValue := r.AuthChainForEvents(r.AllCurrentState())
+	r.mutex.RUnlock()
+	return returnValue
 }
 
 // AuthChainForEvents returns all auth events for all events in the given state
@@ -110,12 +120,14 @@ func (r *ServerRoom) AuthChainForEvents(events []*gomatrixserverlib.Event) (chai
 	// build a map of all events in the room
 	// Timeline and State contain different sets of events, so check them both.
 	eventsByID := map[string]*gomatrixserverlib.Event{}
+	r.mutex.RLock()
 	for _, ev := range r.Timeline {
 		eventsByID[ev.EventID()] = ev
 	}
 	for _, ev := range r.State {
 		eventsByID[ev.EventID()] = ev
 	}
+	r.mutex.RUnlock()
 
 	// a queue of events whose auth events are to be included in the auth chain
 	queue := []*gomatrixserverlib.Event{}
@@ -145,7 +157,9 @@ func (r *ServerRoom) AuthChainForEvents(events []*gomatrixserverlib.Event) (chai
 // Check that the user currently has the membership provided in this room. Fails the test if not.
 func (r *ServerRoom) MustHaveMembershipForUser(t *testing.T, userID, wantMembership string) {
 	t.Helper()
+	r.mutex.RLock()
 	state := r.CurrentState("m.room.member", userID)
+	r.mutex.RUnlock()
 	if state == nil {
 		t.Fatalf("no membership state for %s", userID)
 	}
@@ -162,6 +176,7 @@ func (r *ServerRoom) MustHaveMembershipForUser(t *testing.T, userID, wantMembers
 func (r *ServerRoom) ServersInRoom() (servers []string) {
 	serverSet := make(map[string]struct{})
 
+	r.mutex.RLock()
 	for _, ev := range r.State {
 		if ev.Type() != "m.room.member" {
 			continue
@@ -177,6 +192,7 @@ func (r *ServerRoom) ServersInRoom() (servers []string) {
 
 		serverSet[string(server)] = struct{}{}
 	}
+	r.mutex.RUnlock()
 
 	for server := range serverSet {
 		servers = append(servers, server)
@@ -245,7 +261,9 @@ func InitialRoomEvents(roomVer gomatrixserverlib.RoomVersion, creator string) []
 // depending on the room version
 func (r *ServerRoom) EventIDsOrReferences(events []*gomatrixserverlib.Event) (refs []interface{}) {
 	refs = make([]interface{}, len(events))
+	r.mutex.RLock()
 	eventFormat, _ := r.Version.EventFormat()
+	r.mutex.RUnlock()
 	for i, ev := range events {
 		switch eventFormat {
 		case gomatrixserverlib.EventFormatV1:
