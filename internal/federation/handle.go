@@ -31,9 +31,7 @@ func MakeJoinRequestsHandler(s *Server, w http.ResponseWriter, req *http.Request
 	userID := vars["userID"]
 	roomID := vars["roomID"]
 
-	s.mutex.RLock()
 	room, ok := s.rooms[roomID]
-	s.mutex.RUnlock()
 	if !ok {
 		w.WriteHeader(404)
 		w.Write([]byte("complement: HandleMakeSendJoinRequests make_join unexpected room ID: " + roomID))
@@ -150,9 +148,7 @@ func SendJoinRequestsHandler(s *Server, w http.ResponseWriter, req *http.Request
 	vars := mux.Vars(req)
 	roomID := vars["roomID"]
 
-	s.mutex.RLock()
 	room, ok := s.rooms[roomID]
-	s.mutex.RUnlock()
 	if !ok {
 		w.WriteHeader(404)
 		w.Write([]byte("complement: HandleMakeSendJoinRequests send_join unexpected room ID: " + roomID))
@@ -270,9 +266,7 @@ func HandleInviteRequests(inviteCallback func(*gomatrixserverlib.Event)) func(*S
 			}
 
 			// Sign the event before we send it back
-			s.mutex.RLock()
 			signedEvent := inviteRequest.Event().Sign(s.serverName, s.KeyID, s.Priv)
-			s.mutex.RUnlock()
 
 			// Send the response
 			res := map[string]interface{}{
