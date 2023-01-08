@@ -94,7 +94,7 @@ func (d *Deployer) Deploy(ctx context.Context, blueprintName string) (*Deploymen
 	if len(images) == 0 {
 		return nil, fmt.Errorf("Deploy: No images have been built for blueprint %s", blueprintName)
 	}
-	networkName, err := createNetworkIfNotExists(d.Docker, d.config.PackageNamespace, blueprintName)
+	networkName, err := createNetworkIfNotExists(d.Docker, d.config.PackageNamespace, fmt.Sprintf("%s_%s", blueprintName, d.DeployNamespace))
 	if err != nil {
 		return nil, fmt.Errorf("Deploy: %w", err)
 	}
@@ -153,7 +153,7 @@ func (d *Deployer) Destroy(dep *Deployment, printServerLogs bool, testName strin
 		if printServerLogs {
 			// If we want the logs we gracefully stop the containers to allow
 			// the logs to be flushed.
-			timeout := 1 * time.Second
+			timeout := 10 * time.Second
 			err := d.Docker.ContainerStop(context.Background(), hsDep.ContainerID, &timeout)
 			if err != nil {
 				log.Printf("Destroy: Failed to destroy container %s : %s\n", hsDep.ContainerID, err)
