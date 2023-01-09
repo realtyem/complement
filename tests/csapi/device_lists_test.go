@@ -2,6 +2,7 @@ package csapi_tests
 
 import (
 	"fmt"
+	"sync/atomic"
 	"testing"
 
 	"github.com/matrix-org/complement/internal/b"
@@ -19,11 +20,10 @@ import (
 //  1. `/sync`'s `device_lists.changed/left` contain the correct user IDs.
 //  2. `/keys/query` returns the correct information after device list updates.
 func TestDeviceListUpdates(t *testing.T) {
-	localpartIndex := 0
+	var localpartIndex int32 = 0
 	// generateLocalpart generates a unique localpart based on the given name.
 	generateLocalpart := func(localpart string) string {
-		localpartIndex++
-		return fmt.Sprintf("%s%d", localpart, localpartIndex)
+		return fmt.Sprintf("%s%d", localpart, atomic.AddInt32(&localpartIndex, 1))
 	}
 
 	// uploadNewKeys uploads a new set of keys for a given client.
@@ -109,8 +109,10 @@ func TestDeviceListUpdates(t *testing.T) {
 
 		roomID := alice.CreateRoom(t, map[string]interface{}{"preset": "public_chat"})
 
-		// Alice performs an initial sync
-		_, aliceNextBatch := alice.MustSync(t, client.SyncReq{})
+		// Alice performs a sync until, because there is a small delay because of the partial state flakiness. This can
+		// be 1-2 seconds long. The previous initial sync only grabbed whatever happened first, and because of being mid
+		// partial state, was sent back as a 'not gonna happen' error and not retried.
+		aliceNextBatch := alice.MustSyncUntil(t, client.SyncReq{}, client.SyncJoinedTo(alice.UserID, roomID))
 
 		// Bob joins the room
 		bob.JoinRoom(t, roomID, []string{hsName})
@@ -320,17 +322,20 @@ func TestDeviceListUpdates(t *testing.T) {
 	deployment := Deploy(t, b.BlueprintFederationOneToOneRoom)
 	defer deployment.Destroy(t)
 
-	t.Run("when local user joins a room", func(t *testing.T) { testOtherUserJoin(t, deployment, "hs1", "hs1") })
-	t.Run("when remote user joins a room", func(t *testing.T) { testOtherUserJoin(t, deployment, "hs1", "hs2") })
-	t.Run("when joining a room with a local user", func(t *testing.T) { testJoin(t, deployment, "hs1", "hs1") })
-	t.Run("when joining a room with a remote user", func(t *testing.T) { testJoin(t, deployment, "hs1", "hs2") })
-	t.Run("when local user leaves a room", func(t *testing.T) { testOtherUserLeave(t, deployment, "hs1", "hs1") })
-	t.Run("when remote user leaves a room", func(t *testing.T) { testOtherUserLeave(t, deployment, "hs1", "hs2") })
-	t.Run("when leaving a room with a local user", func(t *testing.T) { testLeave(t, deployment, "hs1", "hs1") })
-	t.Run("when leaving a room with a remote user", func(t *testing.T) {
-		runtime.SkipIf(t, runtime.Synapse) // FIXME: https://github.com/matrix-org/synapse/issues/13650
-		testLeave(t, deployment, "hs1", "hs2")
+	t.Run("Parallel", func(t *testing.T) {
+		t.Run("when local user joins a room", func(t *testing.T) { t.Parallel(); testOtherUserJoin(t, deployment, "hs1", "hs1") })
+		t.Run("when remote user joins a room", func(t *testing.T) { t.Parallel(); testOtherUserJoin(t, deployment, "hs1", "hs2") })
+		t.Run("when joining a room with a local user", func(t *testing.T) { t.Parallel(); testJoin(t, deployment, "hs1", "hs1") })
+		t.Run("when joining a room with a remote user", func(t *testing.T) { t.Parallel(); testJoin(t, deployment, "hs1", "hs2") })
+		t.Run("when local user leaves a room", func(t *testing.T) { t.Parallel(); testOtherUserLeave(t, deployment, "hs1", "hs1") })
+		t.Run("when remote user leaves a room", func(t *testing.T) { t.Parallel(); testOtherUserLeave(t, deployment, "hs1", "hs2") })
+		t.Run("when leaving a room with a local user", func(t *testing.T) { t.Parallel(); testLeave(t, deployment, "hs1", "hs1") })
+		t.Run("when leaving a room with a remote user", func(t *testing.T) {
+			runtime.SkipIf(t, runtime.Synapse) // FIXME: https://github.com/matrix-org/synapse/issues/13650
+			t.Parallel()
+			testLeave(t, deployment, "hs1", "hs2")
+		})
+		t.Run("when local user rejoins a room", func(t *testing.T) { t.Parallel(); testOtherUserRejoin(t, deployment, "hs1", "hs1") })
+		t.Run("when remote user rejoins a room", func(t *testing.T) { t.Parallel(); testOtherUserRejoin(t, deployment, "hs1", "hs2") })
 	})
-	t.Run("when local user rejoins a room", func(t *testing.T) { testOtherUserRejoin(t, deployment, "hs1", "hs1") })
-	t.Run("when remote user rejoins a room", func(t *testing.T) { testOtherUserRejoin(t, deployment, "hs1", "hs2") })
 }
