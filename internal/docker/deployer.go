@@ -105,17 +105,13 @@ func (d *Deployer) Deploy(ctx context.Context, blueprintName string) (*Deploymen
 	wg.Add(len(images)) // ensure we wait until all images have deployed
 	deployImg := func(img types.ImageSummary) error {
 		defer wg.Done()
-		mu.Lock()
-		d.Counter++
-		counter := d.Counter
-		mu.Unlock()
 		contextStr := img.Labels["complement_context"]
 		hsName := img.Labels["complement_hs_name"]
 		asIDToRegistrationMap := asIDToRegistrationFromLabels(img.Labels)
 
 		// TODO: Make CSAPI port configurable
 		deployment, err := deployImage(
-			d.Docker, img.ID, fmt.Sprintf("complement_%s_%s_%s_%d", d.config.PackageNamespace, d.DeployNamespace, contextStr, counter),
+			d.Docker, img.ID, fmt.Sprintf("complement_%s_%s_%s", d.config.PackageNamespace, d.DeployNamespace, contextStr),
 			d.config.PackageNamespace, blueprintName, hsName, asIDToRegistrationMap, contextStr, networkName, d.config,
 		)
 		if err != nil {
