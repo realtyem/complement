@@ -33,268 +33,281 @@ func createRoomWithVisibility(t *testing.T, c *client.CSAPI, visibility string) 
 	})
 }
 
-// Fetches an event after join, and succeeds.
-// sytest: /event/ on joined room works
-func TestFetchEvent(t *testing.T) {
+func TestRoomHistoryVisibility(t *testing.T) {
 	deployment := Deploy(t, b.BlueprintOneToOneRoom)
 	defer deployment.Destroy(t)
 
-	alice := deployment.Client(t, "hs1", "@alice:hs1")
-	bob := deployment.Client(t, "hs1", "@bob:hs1")
+	t.Run("Parallel", func(t *testing.T) {
+		// Fetches an event after join, and succeeds.
+		// sytest: /event/ on joined room works
+		t.Run("FetchEvent", func(t *testing.T) {
+			//formerly TestFetchEvent
+			// with users @alice:hs1 and @bob:hs1
+			t.Parallel()
 
-	roomID := createRoomWithVisibility(t, alice, "shared")
+			alice := deployment.RegisterUser(t, "hs1", "t01alice", "secret", false)
+			bob := deployment.RegisterUser(t, "hs1", "t01bob", "secret", false)
 
-	bob.JoinRoom(t, roomID, nil)
+			roomID := createRoomWithVisibility(t, alice, "shared")
 
-	bob.MustSyncUntil(t, client.SyncReq{}, client.SyncJoinedTo(bob.UserID, roomID))
+			bob.JoinRoom(t, roomID, nil)
 
-	eventID := alice.SendEventSynced(t, roomID, b.Event{
-		Type: "m.room.message",
-		Content: map[string]interface{}{
-			"msgtype": "m.text",
-			"body":    "Hello world",
-		},
-	})
+			bob.MustSyncUntil(t, client.SyncReq{}, client.SyncJoinedTo(bob.UserID, roomID))
 
-	res := fetchEvent(t, bob, roomID, eventID)
+			eventID := alice.SendEventSynced(t, roomID, b.Event{
+				Type: "m.room.message",
+				Content: map[string]interface{}{
+					"msgtype": "m.text",
+					"body":    "Hello world",
+				},
+			})
 
-	must.MatchResponse(t, res, match.HTTPResponse{
-		StatusCode: 200,
-		JSON: []match.JSON{
-			// No harm in checking if the event data is also as expected
-			match.JSONKeyEqual("content", map[string]interface{}{
-				"msgtype": "m.text",
-				"body":    "Hello world",
-			}),
-			match.JSONKeyEqual("type", "m.room.message"),
+			res := fetchEvent(t, bob, roomID, eventID)
 
-			// the spec technically doesn't list these following keys, but we're still checking them because sytest did.
-			// see: https://github.com/matrix-org/matrix-doc/issues/3540
-			match.JSONKeyEqual("room_id", roomID),
-			match.JSONKeyEqual("sender", alice.UserID),
-			match.JSONKeyEqual("event_id", eventID),
-			match.JSONKeyTypeEqual("origin_server_ts", gjson.Number),
-		},
-	})
-}
+			must.MatchResponse(t, res, match.HTTPResponse{
+				StatusCode: 200,
+				JSON: []match.JSON{
+					// No harm in checking if the event data is also as expected
+					match.JSONKeyEqual("content", map[string]interface{}{
+						"msgtype": "m.text",
+						"body":    "Hello world",
+					}),
+					match.JSONKeyEqual("type", "m.room.message"),
 
-// Tries to fetch an event before join, and fails.
-// history_visibility: joined
-// sytest: /event/ does not allow access to events before the user joined
-func TestFetchHistoricalJoinedEventDenied(t *testing.T) {
-	deployment := Deploy(t, b.BlueprintOneToOneRoom)
-	defer deployment.Destroy(t)
+					// the spec technically doesn't list these following keys, but we're still checking them because sytest did.
+					// see: https://github.com/matrix-org/matrix-doc/issues/3540
+					match.JSONKeyEqual("room_id", roomID),
+					match.JSONKeyEqual("sender", alice.UserID),
+					match.JSONKeyEqual("event_id", eventID),
+					match.JSONKeyTypeEqual("origin_server_ts", gjson.Number),
+				},
+			})
+		})
 
-	alice := deployment.Client(t, "hs1", "@alice:hs1")
-	bob := deployment.Client(t, "hs1", "@bob:hs1")
+		// Tries to fetch an event before join, and fails.
+		// history_visibility: joined
+		// sytest: /event/ does not allow access to events before the user joined
+		t.Run("FetchHistoricalJoinedEventDenied", func(t *testing.T) {
+			//formerly TestFetchHistoricalJoinedEventDenied
+			// with users @alice:hs1 and @bob:hs1
+			t.Parallel()
 
-	roomID := createRoomWithVisibility(t, alice, "joined")
+			alice := deployment.RegisterUser(t, "hs1", "t02alice", "secret", false)
+			bob := deployment.RegisterUser(t, "hs1", "t02bob", "secret", false)
 
-	eventID := alice.SendEventSynced(t, roomID, b.Event{
-		Type: "m.room.message",
-		Content: map[string]interface{}{
-			"msgtype": "m.text",
-			"body":    "Hello world",
-		},
-	})
+			roomID := createRoomWithVisibility(t, alice, "joined")
 
-	bob.JoinRoom(t, roomID, nil)
-	bob.MustSyncUntil(t, client.SyncReq{}, client.SyncJoinedTo(bob.UserID, roomID))
+			eventID := alice.SendEventSynced(t, roomID, b.Event{
+				Type: "m.room.message",
+				Content: map[string]interface{}{
+					"msgtype": "m.text",
+					"body":    "Hello world",
+				},
+			})
 
-	res := fetchEvent(t, bob, roomID, eventID)
+			bob.JoinRoom(t, roomID, nil)
+			bob.MustSyncUntil(t, client.SyncReq{}, client.SyncJoinedTo(bob.UserID, roomID))
 
-	must.MatchResponse(t, res, match.HTTPResponse{
-		StatusCode: 404,
-	})
-}
+			res := fetchEvent(t, bob, roomID, eventID)
 
-// Tries to fetch an event before join, and succeeds.
-// history_visibility: shared
-func TestFetchHistoricalSharedEvent(t *testing.T) {
-	deployment := Deploy(t, b.BlueprintOneToOneRoom)
-	defer deployment.Destroy(t)
+			must.MatchResponse(t, res, match.HTTPResponse{
+				StatusCode: 404,
+			})
+		})
 
-	alice := deployment.Client(t, "hs1", "@alice:hs1")
-	bob := deployment.Client(t, "hs1", "@bob:hs1")
+		// Tries to fetch an event before join, and succeeds.
+		// history_visibility: shared
+		t.Run("FetchHistoricalSharedEvent", func(t *testing.T) {
+			//formerly TestFetchHistoricalSharedEvent
+			// with users @alice:hs1 and @bob:hs1
+			t.Parallel()
 
-	roomID := createRoomWithVisibility(t, alice, "shared")
+			alice := deployment.RegisterUser(t, "hs1", "t03alice", "secret", false)
+			bob := deployment.RegisterUser(t, "hs1", "t03bob", "secret", false)
 
-	eventID := alice.SendEventSynced(t, roomID, b.Event{
-		Type: "m.room.message",
-		Content: map[string]interface{}{
-			"msgtype": "m.text",
-			"body":    "Hello world",
-		},
-	})
+			roomID := createRoomWithVisibility(t, alice, "shared")
 
-	bob.JoinRoom(t, roomID, nil)
-	bob.MustSyncUntil(t, client.SyncReq{}, client.SyncJoinedTo(bob.UserID, roomID))
+			eventID := alice.SendEventSynced(t, roomID, b.Event{
+				Type: "m.room.message",
+				Content: map[string]interface{}{
+					"msgtype": "m.text",
+					"body":    "Hello world",
+				},
+			})
 
-	res := fetchEvent(t, bob, roomID, eventID)
+			bob.JoinRoom(t, roomID, nil)
+			bob.MustSyncUntil(t, client.SyncReq{}, client.SyncJoinedTo(bob.UserID, roomID))
 
-	must.MatchResponse(t, res, match.HTTPResponse{
-		StatusCode: 200,
-		JSON: []match.JSON{
-			// No harm in checking if the event data is also as expected
-			match.JSONKeyEqual("content", map[string]interface{}{
-				"msgtype": "m.text",
-				"body":    "Hello world",
-			}),
-			match.JSONKeyEqual("type", "m.room.message"),
+			res := fetchEvent(t, bob, roomID, eventID)
 
-			// the spec technically doesn't list these following keys, but we're still checking them because sytest did.
-			// see: https://github.com/matrix-org/matrix-doc/issues/3540
-			match.JSONKeyEqual("room_id", roomID),
-			match.JSONKeyEqual("sender", alice.UserID),
-			match.JSONKeyEqual("event_id", eventID),
-			match.JSONKeyTypeEqual("origin_server_ts", gjson.Number),
-		},
-	})
-}
+			must.MatchResponse(t, res, match.HTTPResponse{
+				StatusCode: 200,
+				JSON: []match.JSON{
+					// No harm in checking if the event data is also as expected
+					match.JSONKeyEqual("content", map[string]interface{}{
+						"msgtype": "m.text",
+						"body":    "Hello world",
+					}),
+					match.JSONKeyEqual("type", "m.room.message"),
 
-// Tries to fetch an event between being invited and joined, and succeeds.
-// history_visibility: invited
-func TestFetchHistoricalInvitedEventFromBetweenInvite(t *testing.T) {
-	deployment := Deploy(t, b.BlueprintOneToOneRoom)
-	defer deployment.Destroy(t)
+					// the spec technically doesn't list these following keys, but we're still checking them because sytest did.
+					// see: https://github.com/matrix-org/matrix-doc/issues/3540
+					match.JSONKeyEqual("room_id", roomID),
+					match.JSONKeyEqual("sender", alice.UserID),
+					match.JSONKeyEqual("event_id", eventID),
+					match.JSONKeyTypeEqual("origin_server_ts", gjson.Number),
+				},
+			})
+		})
 
-	alice := deployment.Client(t, "hs1", "@alice:hs1")
-	bob := deployment.Client(t, "hs1", "@bob:hs1")
+		// Tries to fetch an event between being invited and joined, and succeeds.
+		// history_visibility: invited
+		t.Run("FetchHistoricalInvitedEventFromBetweenInvite", func(t *testing.T) {
+			//formerly TestFetchHistoricalInvitedEventFromBetweenInvite
+			// with users @alice:hs1 and @bob:hs1
+			t.Parallel()
 
-	roomID := createRoomWithVisibility(t, alice, "invited")
+			alice := deployment.RegisterUser(t, "hs1", "t04alice", "secret", false)
+			bob := deployment.RegisterUser(t, "hs1", "t04bob", "secret", false)
 
-	alice.InviteRoom(t, roomID, bob.UserID)
-	bob.MustSyncUntil(t, client.SyncReq{}, client.SyncInvitedTo(bob.UserID, roomID))
+			roomID := createRoomWithVisibility(t, alice, "invited")
 
-	eventID := alice.SendEventSynced(t, roomID, b.Event{
-		Type: "m.room.message",
-		Content: map[string]interface{}{
-			"msgtype": "m.text",
-			"body":    "Hello world",
-		},
-	})
+			alice.InviteRoom(t, roomID, bob.UserID)
+			bob.MustSyncUntil(t, client.SyncReq{}, client.SyncInvitedTo(bob.UserID, roomID))
 
-	bob.JoinRoom(t, roomID, nil)
-	bob.MustSyncUntil(t, client.SyncReq{}, client.SyncJoinedTo(bob.UserID, roomID))
+			eventID := alice.SendEventSynced(t, roomID, b.Event{
+				Type: "m.room.message",
+				Content: map[string]interface{}{
+					"msgtype": "m.text",
+					"body":    "Hello world",
+				},
+			})
 
-	res := fetchEvent(t, bob, roomID, eventID)
+			bob.JoinRoom(t, roomID, nil)
+			bob.MustSyncUntil(t, client.SyncReq{}, client.SyncJoinedTo(bob.UserID, roomID))
 
-	must.MatchResponse(t, res, match.HTTPResponse{
-		StatusCode: 200,
-		JSON: []match.JSON{
-			// No harm in checking if the event data is also as expected
-			match.JSONKeyEqual("content", map[string]interface{}{
-				"msgtype": "m.text",
-				"body":    "Hello world",
-			}),
-			match.JSONKeyEqual("type", "m.room.message"),
+			res := fetchEvent(t, bob, roomID, eventID)
 
-			// the spec technically doesn't list these following keys, but we're still checking them because sytest did.
-			// see: https://github.com/matrix-org/matrix-doc/issues/3540
-			match.JSONKeyEqual("room_id", roomID),
-			match.JSONKeyEqual("sender", alice.UserID),
-			match.JSONKeyEqual("event_id", eventID),
-			match.JSONKeyTypeEqual("origin_server_ts", gjson.Number),
-		},
-	})
-}
+			must.MatchResponse(t, res, match.HTTPResponse{
+				StatusCode: 200,
+				JSON: []match.JSON{
+					// No harm in checking if the event data is also as expected
+					match.JSONKeyEqual("content", map[string]interface{}{
+						"msgtype": "m.text",
+						"body":    "Hello world",
+					}),
+					match.JSONKeyEqual("type", "m.room.message"),
 
-// Tries to fetch an event before being invited, and fails.
-// history_visibility: invited
-func TestFetchHistoricalInvitedEventFromBeforeInvite(t *testing.T) {
-	deployment := Deploy(t, b.BlueprintOneToOneRoom)
-	defer deployment.Destroy(t)
+					// the spec technically doesn't list these following keys, but we're still checking them because sytest did.
+					// see: https://github.com/matrix-org/matrix-doc/issues/3540
+					match.JSONKeyEqual("room_id", roomID),
+					match.JSONKeyEqual("sender", alice.UserID),
+					match.JSONKeyEqual("event_id", eventID),
+					match.JSONKeyTypeEqual("origin_server_ts", gjson.Number),
+				},
+			})
+		})
 
-	alice := deployment.Client(t, "hs1", "@alice:hs1")
-	bob := deployment.Client(t, "hs1", "@bob:hs1")
+		// Tries to fetch an event before being invited, and fails.
+		// history_visibility: invited
+		t.Run("FetchHistoricalInvitedEventFromBeforeInvite", func(t *testing.T) {
+			//formerly TestFetchHistoricalInvitedEventFromBeforeInvite
+			// with users @alice:hs1 and @bob:hs1
+			t.Parallel()
 
-	roomID := createRoomWithVisibility(t, alice, "invited")
+			alice := deployment.RegisterUser(t, "hs1", "t05alice", "secret", false)
+			bob := deployment.RegisterUser(t, "hs1", "t05bob", "secret", false)
 
-	eventID := alice.SendEventSynced(t, roomID, b.Event{
-		Type: "m.room.message",
-		Content: map[string]interface{}{
-			"msgtype": "m.text",
-			"body":    "Hello world",
-		},
-	})
+			roomID := createRoomWithVisibility(t, alice, "invited")
 
-	alice.InviteRoom(t, roomID, bob.UserID)
-	bob.MustSyncUntil(t, client.SyncReq{}, client.SyncInvitedTo(bob.UserID, roomID))
+			eventID := alice.SendEventSynced(t, roomID, b.Event{
+				Type: "m.room.message",
+				Content: map[string]interface{}{
+					"msgtype": "m.text",
+					"body":    "Hello world",
+				},
+			})
 
-	bob.JoinRoom(t, roomID, nil)
-	bob.MustSyncUntil(t, client.SyncReq{}, client.SyncJoinedTo(bob.UserID, roomID))
+			alice.InviteRoom(t, roomID, bob.UserID)
+			bob.MustSyncUntil(t, client.SyncReq{}, client.SyncInvitedTo(bob.UserID, roomID))
 
-	res := fetchEvent(t, bob, roomID, eventID)
+			bob.JoinRoom(t, roomID, nil)
+			bob.MustSyncUntil(t, client.SyncReq{}, client.SyncJoinedTo(bob.UserID, roomID))
 
-	must.MatchResponse(t, res, match.HTTPResponse{
-		StatusCode: 404,
-	})
-}
+			res := fetchEvent(t, bob, roomID, eventID)
 
-// Tries to fetch an event without having joined, and fails.
-// history_visibility: shared
-// sytest: /event/ on non world readable room does not work
-func TestFetchEventNonWorldReadable(t *testing.T) {
-	deployment := Deploy(t, b.BlueprintOneToOneRoom)
-	defer deployment.Destroy(t)
+			must.MatchResponse(t, res, match.HTTPResponse{
+				StatusCode: 404,
+			})
+		})
 
-	alice := deployment.Client(t, "hs1", "@alice:hs1")
-	bob := deployment.Client(t, "hs1", "@bob:hs1")
+		// Tries to fetch an event without having joined, and fails.
+		// history_visibility: shared
+		// sytest: /event/ on non world readable room does not work
+		t.Run("FetchEventNonWorldReadable", func(t *testing.T) {
+			//formerly TestFetchEventNonWorldReadable
+			// with users @alice:hs1 and @bob:hs1
+			t.Parallel()
 
-	roomID := createRoomWithVisibility(t, alice, "shared")
+			alice := deployment.RegisterUser(t, "hs1", "t06alice", "secret", false)
+			bob := deployment.RegisterUser(t, "hs1", "t06bob", "secret", false)
 
-	eventID := alice.SendEventSynced(t, roomID, b.Event{
-		Type: "m.room.message",
-		Content: map[string]interface{}{
-			"msgtype": "m.text",
-			"body":    "Hello world",
-		},
-	})
+			roomID := createRoomWithVisibility(t, alice, "shared")
 
-	res := fetchEvent(t, bob, roomID, eventID)
+			eventID := alice.SendEventSynced(t, roomID, b.Event{
+				Type: "m.room.message",
+				Content: map[string]interface{}{
+					"msgtype": "m.text",
+					"body":    "Hello world",
+				},
+			})
 
-	must.MatchResponse(t, res, match.HTTPResponse{
-		StatusCode: 404,
-	})
-}
+			res := fetchEvent(t, bob, roomID, eventID)
 
-// Tries to fetch an event without having joined, and succeeds.
-// history_visibility: world_readable
-func TestFetchEventWorldReadable(t *testing.T) {
-	deployment := Deploy(t, b.BlueprintOneToOneRoom)
-	defer deployment.Destroy(t)
+			must.MatchResponse(t, res, match.HTTPResponse{
+				StatusCode: 404,
+			})
+		})
 
-	alice := deployment.Client(t, "hs1", "@alice:hs1")
-	bob := deployment.Client(t, "hs1", "@bob:hs1")
+		// Tries to fetch an event without having joined, and succeeds.
+		// history_visibility: world_readable
+		t.Run("FetchEventWorldReadable", func(t *testing.T) {
+			// formerly TestFetchEventWorldReadable
+			// with users @alice:hs1 and @bob:hs1
+			t.Parallel()
+			alice := deployment.RegisterUser(t, "hs1", "t07alice", "secret", false)
+			bob := deployment.RegisterUser(t, "hs1", "t07bob", "secret", false)
 
-	roomID := createRoomWithVisibility(t, alice, "world_readable")
+			roomID := createRoomWithVisibility(t, alice, "world_readable")
 
-	eventID := alice.SendEventSynced(t, roomID, b.Event{
-		Type: "m.room.message",
-		Content: map[string]interface{}{
-			"msgtype": "m.text",
-			"body":    "Hello world",
-		},
-	})
+			eventID := alice.SendEventSynced(t, roomID, b.Event{
+				Type: "m.room.message",
+				Content: map[string]interface{}{
+					"msgtype": "m.text",
+					"body":    "Hello world",
+				},
+			})
 
-	res := fetchEvent(t, bob, roomID, eventID)
+			res := fetchEvent(t, bob, roomID, eventID)
 
-	must.MatchResponse(t, res, match.HTTPResponse{
-		StatusCode: 200,
-		JSON: []match.JSON{
-			// No harm in checking if the event data is also as expected
-			match.JSONKeyEqual("content", map[string]interface{}{
-				"msgtype": "m.text",
-				"body":    "Hello world",
-			}),
-			match.JSONKeyEqual("type", "m.room.message"),
+			must.MatchResponse(t, res, match.HTTPResponse{
+				StatusCode: 200,
+				JSON: []match.JSON{
+					// No harm in checking if the event data is also as expected
+					match.JSONKeyEqual("content", map[string]interface{}{
+						"msgtype": "m.text",
+						"body":    "Hello world",
+					}),
+					match.JSONKeyEqual("type", "m.room.message"),
 
-			// the spec technically doesn't list these following keys, but we're still checking them because sytest did.
-			// see: https://github.com/matrix-org/matrix-doc/issues/3540
-			match.JSONKeyEqual("room_id", roomID),
-			match.JSONKeyEqual("sender", alice.UserID),
-			match.JSONKeyEqual("event_id", eventID),
-			match.JSONKeyTypeEqual("origin_server_ts", gjson.Number),
-		},
+					// the spec technically doesn't list these following keys, but we're still checking them because sytest did.
+					// see: https://github.com/matrix-org/matrix-doc/issues/3540
+					match.JSONKeyEqual("room_id", roomID),
+					match.JSONKeyEqual("sender", alice.UserID),
+					match.JSONKeyEqual("event_id", eventID),
+					match.JSONKeyTypeEqual("origin_server_ts", gjson.Number),
+				},
+			})
+		})
 	})
 }
