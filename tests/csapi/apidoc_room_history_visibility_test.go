@@ -37,6 +37,9 @@ func TestRoomHistoryVisibility(t *testing.T) {
 	deployment := Deploy(t, b.BlueprintOneToOneRoom)
 	defer deployment.Destroy(t)
 
+	alicePassword := "alicesResturantIsATerriblePassword"
+	bobPassword := "EveryoneSeemsToHaveAnUncleBob"
+
 	t.Run("Parallel", func(t *testing.T) {
 		// Fetches an event after join, and succeeds.
 		// sytest: /event/ on joined room works
@@ -45,8 +48,8 @@ func TestRoomHistoryVisibility(t *testing.T) {
 			// with users @alice:hs1 and @bob:hs1
 			t.Parallel()
 
-			alice := deployment.RegisterUser(t, "hs1", "t01alice", "secret", false)
-			bob := deployment.RegisterUser(t, "hs1", "t01bob", "secret", false)
+			alice := deployment.RegisterUser(t, "hs1", "t01alice", alicePassword, false)
+			bob := deployment.RegisterUser(t, "hs1", "t01bob", bobPassword, false)
 
 			roomID := createRoomWithVisibility(t, alice, "shared")
 
@@ -92,8 +95,8 @@ func TestRoomHistoryVisibility(t *testing.T) {
 			// with users @alice:hs1 and @bob:hs1
 			t.Parallel()
 
-			alice := deployment.RegisterUser(t, "hs1", "t02alice", "secret", false)
-			bob := deployment.RegisterUser(t, "hs1", "t02bob", "secret", false)
+			alice := deployment.RegisterUser(t, "hs1", "t02alice", alicePassword, false)
+			bob := deployment.RegisterUser(t, "hs1", "t02bob", bobPassword, false)
 
 			roomID := createRoomWithVisibility(t, alice, "joined")
 
@@ -122,8 +125,8 @@ func TestRoomHistoryVisibility(t *testing.T) {
 			// with users @alice:hs1 and @bob:hs1
 			t.Parallel()
 
-			alice := deployment.RegisterUser(t, "hs1", "t03alice", "secret", false)
-			bob := deployment.RegisterUser(t, "hs1", "t03bob", "secret", false)
+			alice := deployment.RegisterUser(t, "hs1", "t03alice", alicePassword, false)
+			bob := deployment.RegisterUser(t, "hs1", "t03bob", bobPassword, false)
 
 			roomID := createRoomWithVisibility(t, alice, "shared")
 
@@ -167,8 +170,8 @@ func TestRoomHistoryVisibility(t *testing.T) {
 			// with users @alice:hs1 and @bob:hs1
 			t.Parallel()
 
-			alice := deployment.RegisterUser(t, "hs1", "t04alice", "secret", false)
-			bob := deployment.RegisterUser(t, "hs1", "t04bob", "secret", false)
+			alice := deployment.RegisterUser(t, "hs1", "t04alice", alicePassword, false)
+			bob := deployment.RegisterUser(t, "hs1", "t04bob", bobPassword, false)
 
 			roomID := createRoomWithVisibility(t, alice, "invited")
 
@@ -215,8 +218,8 @@ func TestRoomHistoryVisibility(t *testing.T) {
 			// with users @alice:hs1 and @bob:hs1
 			t.Parallel()
 
-			alice := deployment.RegisterUser(t, "hs1", "t05alice", "secret", false)
-			bob := deployment.RegisterUser(t, "hs1", "t05bob", "secret", false)
+			alice := deployment.RegisterUser(t, "hs1", "t05alice", alicePassword, false)
+			bob := deployment.RegisterUser(t, "hs1", "t05bob", bobPassword, false)
 
 			roomID := createRoomWithVisibility(t, alice, "invited")
 
@@ -249,8 +252,8 @@ func TestRoomHistoryVisibility(t *testing.T) {
 			// with users @alice:hs1 and @bob:hs1
 			t.Parallel()
 
-			alice := deployment.RegisterUser(t, "hs1", "t06alice", "secret", false)
-			bob := deployment.RegisterUser(t, "hs1", "t06bob", "secret", false)
+			alice := deployment.RegisterUser(t, "hs1", "t06alice", alicePassword, false)
+			bob := deployment.RegisterUser(t, "hs1", "t06bob", bobPassword, false)
 
 			roomID := createRoomWithVisibility(t, alice, "shared")
 
@@ -275,8 +278,8 @@ func TestRoomHistoryVisibility(t *testing.T) {
 			// formerly TestFetchEventWorldReadable
 			// with users @alice:hs1 and @bob:hs1
 			t.Parallel()
-			alice := deployment.RegisterUser(t, "hs1", "t07alice", "secret", false)
-			bob := deployment.RegisterUser(t, "hs1", "t07bob", "secret", false)
+			alice := deployment.RegisterUser(t, "hs1", "t07alice", alicePassword, false)
+			bob := deployment.RegisterUser(t, "hs1", "t07bob", bobPassword, false)
 
 			roomID := createRoomWithVisibility(t, alice, "world_readable")
 
