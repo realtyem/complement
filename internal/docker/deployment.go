@@ -124,9 +124,9 @@ func (d *Deployment) RegisterUser(t *testing.T, hsName, localpart, password stri
 	}
 
 	// remember the token so subsequent calls to deployment.Client return the user
-	//dep.hsMutex.Lock()
+	dep.hsMutex.Lock()
 	dep.AccessTokens[userID] = accessToken
-	//dep.hsMutex.Unlock()
+	dep.hsMutex.Unlock()
 
 	client.UserID = userID
 	client.AccessToken = accessToken
