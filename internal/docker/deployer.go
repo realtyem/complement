@@ -177,11 +177,6 @@ func (d *Deployer) Destroy(dep *Deployment, printServerLogs bool, testName strin
 		if err != nil {
 			log.Printf("Destroy: Failed to remove container %s : %s\n", hsDep.ContainerID, err)
 		}
-
-		err = d.RemoveSelectNetwork( fmt.Sprintf("%s_%s", dep.BlueprintName, d.DeployNamespace))
-		if err != nil {
-			log.Printf("Destroy: error removing networks %v", err)
-		}
 	}
 }
 

@@ -1,6 +1,8 @@
 package docker
 
 import (
+	"fmt"
+	"log"
 	"sync"
 	"testing"
 	"time"
@@ -52,6 +54,11 @@ func (hsDep *HomeserverDeployment) SetEndpoints(baseURL string, fedBaseURL strin
 func (d *Deployment) Destroy(t *testing.T) {
 	t.Helper()
 	d.Deployer.Destroy(d, d.Deployer.config.AlwaysPrintServerLogs || t.Failed(), t.Name(), t.Failed())
+	err := d.Deployer.RemoveSelectNetwork( fmt.Sprintf("%s_%s", d.BlueprintName, d.Deployer.DeployNamespace))
+	if err != nil {
+		log.Printf("Destroy: error removing networks %v", err)
+	}
+
 }
 
 // Client returns a CSAPI client targeting the given hsName, using the access token for the given userID.
