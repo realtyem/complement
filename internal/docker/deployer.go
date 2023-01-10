@@ -177,7 +177,33 @@ func (d *Deployer) Destroy(dep *Deployment, printServerLogs bool, testName strin
 		if err != nil {
 			log.Printf("Destroy: Failed to remove container %s : %s\n", hsDep.ContainerID, err)
 		}
+
+		err = d.RemoveSelectNetwork( fmt.Sprintf("%s_%s", dep.BlueprintName, d.DeployNamespace))
+		if err != nil {
+			log.Printf("Destroy: error removing networks %v", err)
+		}
 	}
+}
+
+// removeImages removes all images with `complementLabel`.
+func (d *Deployer) RemoveSelectNetwork(blueprintName string) error {
+	networks, err := d.Docker.NetworkList(context.Background(), types.NetworkListOptions{
+		Filters: label(
+			"complement_context",
+			"complement_pkg="+d.config.PackageNamespace,
+			"complement_blueprint="+blueprintName,
+		),
+	})
+	if err != nil {
+		return err
+	}
+	for _, nw := range networks {
+		err = d.Docker.NetworkRemove(context.Background(), nw.ID)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (d *Deployer) executePostScript(hsDep *HomeserverDeployment, testName string, failed bool) ([]byte, error) {
