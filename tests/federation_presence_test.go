@@ -13,11 +13,11 @@ func TestRemotePresence(t *testing.T) {
 	deployment := Deploy(t, b.BlueprintFederationOneToOneRoom)
 	defer deployment.Destroy(t)
 
-	alice := deployment.Client(t, "hs1", "@alice:hs1")
-	bob := deployment.Client(t, "hs2", "@bob:hs2")
 
 	// sytest: Presence changes are also reported to remote room members
 	t.Run("Presence changes are also reported to remote room members", func(t *testing.T) {
+		alice := deployment.Client(t, "hs1", "@alice:hs1")
+		bob := deployment.Client(t, "hs2", "@bob:hs2")
 		_, bobSinceToken := bob.MustSync(t, client.SyncReq{TimeoutMillis: "0"})
 
 		statusMsg := "Update for room members"
@@ -36,6 +36,8 @@ func TestRemotePresence(t *testing.T) {
 	})
 	// sytest: Presence changes to UNAVAILABLE are reported to remote room members
 	t.Run("Presence changes to UNAVAILABLE are reported to remote room members", func(t *testing.T) {
+		alice := deployment.Client(t, "hs1", "@alice:hs1")
+		bob := deployment.Client(t, "hs2", "@bob:hs2")
 		_, bobSinceToken := bob.MustSync(t, client.SyncReq{TimeoutMillis: "0"})
 
 		alice.MustDoFunc(t, "PUT", []string{"_matrix", "client", "v3", "presence", "@alice:hs1", "status"},
