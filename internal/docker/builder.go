@@ -497,7 +497,7 @@ func endpoints(p nat.PortMap, csPort, ssPort int) (baseURL, fedBaseURL string, e
 		return "", "", fmt.Errorf("port %s exposed with not mapped port: %+v", csapiPort, p)
 	}
 	baseURL = fmt.Sprintf("http://"+csapiPortInfo[0].HostIP+":%s", csapiPortInfo[0].HostPort)
-
+	log.Printf("baseURL: %s", baseURL)
 	ssapiPort := fmt.Sprintf("%d/tcp", ssPort)
 	ssapiPortInfo, ok := p[nat.Port(ssapiPort)]
 	if !ok {
@@ -507,6 +507,7 @@ func endpoints(p nat.PortMap, csPort, ssPort int) (baseURL, fedBaseURL string, e
 		return "", "", fmt.Errorf("port %s exposed with not mapped port: %+v", ssapiPort, p)
 	}
 	fedBaseURL = fmt.Sprintf("https://"+csapiPortInfo[0].HostIP+":%s", ssapiPortInfo[0].HostPort)
+	log.Printf("fedBaseURL: %s", fedBaseURL)
 	return
 }
 

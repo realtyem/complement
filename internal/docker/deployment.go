@@ -39,10 +39,11 @@ type HomeserverDeployment struct {
 
 // Updates the client and federation base URLs of the homeserver deployment.
 func (hsDep *HomeserverDeployment) SetEndpoints(baseURL string, fedBaseURL string) {
+	hsDep.hsMutex.Lock()
+
 	hsDep.BaseURL = baseURL
 	hsDep.FedBaseURL = fedBaseURL
 
-	hsDep.hsMutex.Lock()
 	for _, client := range hsDep.CSAPIClients {
 		client.BaseURL = baseURL
 	}
