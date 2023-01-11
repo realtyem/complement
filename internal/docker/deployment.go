@@ -71,16 +71,16 @@ func (d *Deployment) Client(t *testing.T, hsName, userID string) *client.CSAPI {
 		t.Fatalf("Deployment.Client - HS name '%s' not found", hsName)
 		return nil
 	}
-	//dep.hsMutex.RLock()
+	dep.hsMutex.RLock()
 	token := dep.AccessTokens[userID]
-	//dep.hsMutex.RUnlock()
+	dep.hsMutex.RUnlock()
 	if token == "" && userID != "" {
 		t.Fatalf("Deployment.Client - HS name '%s' - user ID '%s' not found", hsName, userID)
 		return nil
 	}
-	//dep.hsMutex.RLock()
+	dep.hsMutex.RLock()
 	deviceID := dep.DeviceIDs[userID]
-	//dep.hsMutex.RUnlock()
+	dep.hsMutex.RUnlock()
 	if deviceID == "" && userID != "" {
 		t.Logf("WARNING: Deployment.Client - HS name '%s' - user ID '%s' - deviceID not found", hsName, userID)
 	}
@@ -93,9 +93,9 @@ func (d *Deployment) Client(t *testing.T, hsName, userID string) *client.CSAPI {
 		SyncUntilTimeout: 5 * time.Second,
 		Debug:            d.Deployer.debugLogging,
 	}
-	//dep.hsMutex.Lock()
+	dep.hsMutex.Lock()
 	dep.CSAPIClients = append(dep.CSAPIClients, client)
-	//dep.hsMutex.Unlock()
+	dep.hsMutex.Unlock()
 	return client
 }
 
