@@ -7,19 +7,20 @@ import (
 
 	"github.com/matrix-org/complement/internal/b"
 	"github.com/matrix-org/complement/internal/client"
+	"github.com/matrix-org/complement/internal/docker"
 	"github.com/matrix-org/complement/runtime"
 )
 
-func TestSyncArchive(t *testing.T) {
-	deployment := Deploy(t, b.BlueprintCleanHS)
-	defer deployment.Destroy(t)
+func testSyncArchive(t *testing.T, deployment *docker.Deployment) {
+	//deployment := Deploy(t, b.BlueprintCleanHS)
+	//defer deployment.Destroy(t)
 
 	alicePassword := "AliceCooperWasHere"
 	bobPassword := "BobsRoadGoesNowhere"
 
 	t.Run("Parallel", func(t *testing.T) {
 		// sytest: Left rooms appear in the leave section of sync
-		t.Run("SyncLeaveSection", func(t *testing.T) {
+		t.Run("TestSyncLeaveSection", func(t *testing.T) {
 			// formerly TestSyncLeaveSection
 			// with users: @tSyncArchive01alice:hs1
 			runtime.SkipIf(t, runtime.Dendrite) // FIXME: https://github.com/matrix-org/dendrite/issues/1323

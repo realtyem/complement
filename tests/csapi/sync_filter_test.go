@@ -12,40 +12,32 @@ import (
 	"github.com/matrix-org/complement/internal/must"
 )
 
-func TestSyncFilter(t *testing.T) {
+func testSyncFilter(t *testing.T) {
 	deployment := Deploy(t, b.BlueprintAlice)
 	defer deployment.Destroy(t)
 	authedClient := deployment.Client(t, "hs1", "@alice:hs1")
 	// sytest: Can create filter
-	t.Run("Can create filter", func(t *testing.T) {
-		createFilter(t, authedClient, map[string]interface{}{
-			"room": map[string]interface{}{
-				"timeline": map[string]int{
-					"limit": 10,
-				},
-			},
-		})
-	})
 	// sytest: Can download filter
-	t.Run("Can download filter", func(t *testing.T) {
-		filterID := createFilter(t, authedClient, map[string]interface{}{
-			"room": map[string]interface{}{
-				"timeline": map[string]int{
-					"limit": 10,
-				},
-			},
-		})
-		res := authedClient.MustDoFunc(t, "GET", []string{"_matrix", "client", "v3", "user", "@alice:hs1", "filter", filterID})
-		must.MatchResponse(t, res, match.HTTPResponse{
-			JSON: []match.JSON{
-				match.JSONKeyPresent("room"),
-				match.JSONKeyEqual("room.timeline.limit", float64(10)),
-			},
-		})
-
+	t.Run("Can create/download filter", func(t *testing.T) {
+		testSyncCreateAndDownloadFilter(t, authedClient)
 	})
 }
-
+func testSyncCreateAndDownloadFilter(t *testing.T, alice *client.CSAPI) {
+	filterID := createFilter(t, alice, map[string]interface{}{
+		"room": map[string]interface{}{
+			"timeline": map[string]int{
+				"limit": 10,
+			},
+		},
+	})
+	res := alice.MustDoFunc(t, "GET", []string{"_matrix", "client", "v3", "user", alice.UserID, "filter", filterID})
+	must.MatchResponse(t, res, match.HTTPResponse{
+		JSON: []match.JSON{
+			match.JSONKeyPresent("room"),
+			match.JSONKeyEqual("room.timeline.limit", float64(10)),
+		},
+	})
+}
 func createFilter(t *testing.T, c *client.CSAPI, filterContent map[string]interface{}) string {
 	t.Helper()
 	res := c.MustDoFunc(t, "POST", []string{"_matrix", "client", "v3", "user", c.UserID, "filter"}, client.WithJSONBody(t, filterContent))

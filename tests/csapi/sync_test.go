@@ -101,7 +101,7 @@ func TestTentativeEventualJoiningAfterRejecting(t *testing.T) {
 	}
 }
 
-func TestSync(t *testing.T) {
+func TestNewSync(t *testing.T) {
 	runtime.SkipIf(t, runtime.Dendrite) // FIXME: https://github.com/matrix-org/dendrite/issues/1324
 	// sytest: Can sync
 	deployment := Deploy(t, b.BlueprintOneToOneRoom)
@@ -203,6 +203,7 @@ func TestSync(t *testing.T) {
 		// sytest: Newly joined room includes presence in incremental sync
 		t.Run("Newly joined room includes presence in incremental sync", func(t *testing.T) {
 			runtime.SkipIf(t, runtime.Dendrite) // FIXME: https://github.com/matrix-org/dendrite/issues/1324
+			t.Parallel()
 			roomID := alice.CreateRoom(t, map[string]interface{}{"preset": "public_chat"})
 			alice.MustSyncUntil(t, client.SyncReq{}, client.SyncJoinedTo(alice.UserID, roomID))
 			_, nextBatch := bob.MustSync(t, client.SyncReq{})
@@ -223,6 +224,7 @@ func TestSync(t *testing.T) {
 		// sytest: Get presence for newly joined members in incremental sync
 		t.Run("Get presence for newly joined members in incremental sync", func(t *testing.T) {
 			runtime.SkipIf(t, runtime.Dendrite) // FIXME: https://github.com/matrix-org/dendrite/issues/1324
+			t.Parallel()
 			roomID := alice.CreateRoom(t, map[string]interface{}{"preset": "public_chat"})
 			nextBatch := alice.MustSyncUntil(t, client.SyncReq{}, client.SyncJoinedTo(alice.UserID, roomID))
 			sendMessages(t, alice, roomID, "dummy message", 1)
@@ -370,18 +372,39 @@ func TestSync(t *testing.T) {
 
 			// that's it - we successfully did a gappy sync.
 		})
+		t.Run("TestRoomSummary", func(t *testing.T) {
+			runtime.SkipIf(t, runtime.Synapse) // Currently more of a Dendrite test, so skip on Synapse
+			t.Parallel()
+			testRoomSummary(t, alice, bob)
+		})
+		t.Run("TestPresenceSyncDifferentRooms", func(t *testing.T) {
+			t.Parallel()
+			charlie := deployment.NewUser(t, "charlie", "hs1")
+			testPresenceSyncDifferentRooms(t, alice, bob, charlie)
+		})
+		// sytest: Can create filter
+		// sytest: Can download filter
+		t.Run("Can create/download filter", func(t *testing.T) {
+			t.Parallel()
+			testSyncCreateAndDownloadFilter(t, alice)
+		})
+		t.Run("", func(t *testing.T) {
+
+			testSyncArchive(t, deployment)
+		})
 	})
 }
+// Abstracted tests below
 
 // Test presence from people in 2 different rooms in incremental sync
-func TestPresenceSyncDifferentRooms(t *testing.T) {
-	deployment := Deploy(t, b.BlueprintOneToOneRoom)
-	defer deployment.Destroy(t)
+func testPresenceSyncDifferentRooms(t *testing.T, alice *client.CSAPI, bob *client.CSAPI, charlie *client.CSAPI) {
+	//deployment := Deploy(t, b.BlueprintOneToOneRoom)
+	//defer deployment.Destroy(t)
 
-	alice := deployment.Client(t, "hs1", "@alice:hs1")
-	bob := deployment.Client(t, "hs1", "@bob:hs1")
+	//alice := deployment.Client(t, "hs1", "@alice:hs1")
+	//bob := deployment.Client(t, "hs1", "@bob:hs1")
 
-	charlie := deployment.NewUser(t, "charlie", "hs1")
+	//charlie := deployment.NewUser(t, "charlie", "hs1")
 
 	// Alice creates two rooms: one with her and Bob, and a second with her and Charlie.
 	bobRoomID := alice.CreateRoom(t, struct{}{})
@@ -434,13 +457,7 @@ func TestPresenceSyncDifferentRooms(t *testing.T) {
 	})
 }
 
-func TestRoomSummary(t *testing.T) {
-	runtime.SkipIf(t, runtime.Synapse) // Currently more of a Dendrite test, so skip on Synapse
-	deployment := Deploy(t, b.BlueprintOneToOneRoom)
-	defer deployment.Destroy(t)
-	alice := deployment.Client(t, "hs1", "@alice:hs1")
-	bob := deployment.Client(t, "hs1", "@bob:hs1")
-
+func testRoomSummary(t *testing.T, alice *client.CSAPI, bob *client.CSAPI) {
 	_, aliceSince := alice.MustSync(t, client.SyncReq{TimeoutMillis: "0"})
 	roomID := alice.CreateRoom(t, map[string]interface{}{
 		"preset": "public_chat",
@@ -479,6 +496,7 @@ func TestRoomSummary(t *testing.T) {
 	alice.MustSyncUntil(t, client.SyncReq{Since: aliceSince}, client.SyncJoinedTo(bob.UserID, roomID), joinedCheck)
 }
 
+// helper functions below
 func sendMessages(t *testing.T, client *client.CSAPI, roomID string, prefix string, count int) {
 	t.Helper()
 	for i := 0; i < count; i++ {
