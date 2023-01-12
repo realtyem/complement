@@ -6,23 +6,19 @@ import (
 
 	"github.com/tidwall/gjson"
 
-	"github.com/matrix-org/complement/internal/b"
 	"github.com/matrix-org/complement/internal/client"
+	"github.com/matrix-org/complement/internal/docker"
 	"github.com/matrix-org/complement/internal/match"
 	"github.com/matrix-org/complement/internal/must"
 )
 
-func testSyncFilter(t *testing.T) {
-	deployment := Deploy(t, b.BlueprintAlice)
-	defer deployment.Destroy(t)
-	authedClient := deployment.Client(t, "hs1", "@alice:hs1")
-	// sytest: Can create filter
-	// sytest: Can download filter
-	t.Run("Can create/download filter", func(t *testing.T) {
-		testSyncCreateAndDownloadFilter(t, authedClient)
-	})
-}
-func testSyncCreateAndDownloadFilter(t *testing.T, alice *client.CSAPI) {
+// abstracted tests below. These are now called from sync_test.go
+
+// sytest: Can create filter
+// sytest: Can download filter
+func testSyncCreateAndDownloadFilter(t *testing.T, deployment *docker.Deployment) {
+	alice := deployment.NewUser(t, "tSyncFilterAlice", "hs1")
+
 	filterID := createFilter(t, alice, map[string]interface{}{
 		"room": map[string]interface{}{
 			"timeline": map[string]int{
@@ -38,6 +34,7 @@ func testSyncCreateAndDownloadFilter(t *testing.T, alice *client.CSAPI) {
 		},
 	})
 }
+
 func createFilter(t *testing.T, c *client.CSAPI, filterContent map[string]interface{}) string {
 	t.Helper()
 	res := c.MustDoFunc(t, "POST", []string{"_matrix", "client", "v3", "user", c.UserID, "filter"}, client.WithJSONBody(t, filterContent))

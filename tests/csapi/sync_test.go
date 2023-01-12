@@ -10,17 +10,525 @@ import (
 
 	"github.com/matrix-org/complement/internal/b"
 	"github.com/matrix-org/complement/internal/client"
+	"github.com/matrix-org/complement/internal/docker"
 	"github.com/matrix-org/complement/internal/federation"
 	"github.com/matrix-org/complement/runtime"
 )
 
-// Observes "first bug" from https://github.com/matrix-org/dendrite/pull/1394#issuecomment-687056673
-func TestCumulativeJoinLeaveJoinSync(t *testing.T) {
-	deployment := Deploy(t, b.BlueprintOneToOneRoom)
+func TestNewSync(t *testing.T) {
+	runtime.SkipIf(t, runtime.Dendrite) // FIXME: https://github.com/matrix-org/dendrite/issues/1324
+	// sytest: Can sync
+	deployment := Deploy(t, b.BlueprintCleanHS)
 	defer deployment.Destroy(t)
 
-	alice := deployment.Client(t, "hs1", "@alice:hs1")
-	bob := deployment.Client(t, "hs1", "@bob:hs1")
+	t.Run("parallel", func(t *testing.T) {
+		t.Run("Can sync a joined room", func(t *testing.T) {
+			t.Parallel()
+			testSyncJoinedRoom(t, deployment)
+		})
+		t.Run("Full state sync includes joined rooms", func(t *testing.T) {
+			t.Parallel()
+			testSyncIncludesJoinedRooms(t, deployment)
+		})
+		t.Run("Newly joined room is included in an incremental sync", func(t *testing.T) {
+			t.Parallel()
+			testIncSyncIncludesNewlyJoinedRoom(t, deployment)
+		})
+		t.Run("Newly joined room has correct timeline in incremental sync", func(t *testing.T) {
+			runtime.SkipIf(t, runtime.Dendrite) // FIXME: https://github.com/matrix-org/dendrite/issues/1324
+			t.Parallel()
+			testIncSyncCorrectTimelineInNewlyJoinedRoom(t, deployment)
+		})
+		t.Run("Newly joined room includes presence in incremental sync", func(t *testing.T) {
+			runtime.SkipIf(t, runtime.Dendrite) // FIXME: https://github.com/matrix-org/dendrite/issues/1324
+			t.Parallel()
+			testIncSyncOwnPresenceInNewlyJoinedRoom(t, deployment)
+		})
+		t.Run("Get presence for newly joined members in incremental sync", func(t *testing.T) {
+			runtime.SkipIf(t, runtime.Dendrite) // FIXME: https://github.com/matrix-org/dendrite/issues/1324
+			t.Parallel()
+			testIncSyncOthersPresenceNewlyJoinedRoom(t, deployment)
+		})
+		t.Run("sync should succeed even if the sync token points to a redaction of an unknown event", func(t *testing.T) {
+			// will create users: @tSync07Alice:hs1  and a "fake" user charlie
+			t.Parallel()
+			testSyncSuccessEvenIfPointingToRedactionOfUnknownEvent(t, deployment)
+		})
+		t.Run("TestRoomSummary", func(t *testing.T) {
+			// will create users: @tSync08Alice:hs1 and @tSync08Bob:hs1
+			runtime.SkipIf(t, runtime.Synapse) // Currently more of a Dendrite test, so skip on Synapse
+			t.Parallel()
+			testRoomSummary(t, deployment)
+		})
+		t.Run("TestPresenceSyncDifferentRooms", func(t *testing.T) {
+			// will create users: @tSync09Alice:hs1, @tSync09Bob:hs1 and @tSync09Charlie:hs1
+			t.Parallel()
+			testPresenceSyncDifferentRooms(t, deployment)
+		})
+	})
+	t.Run("TestSyncFilter", func(t *testing.T) {
+		// sytest: Can create filter
+		// sytest: Can download filter
+		t.Run("Can create and download filter", func(t *testing.T) {
+			t.Parallel()
+			// defined in sync_filter_test.go
+			testSyncCreateAndDownloadFilter(t, deployment)
+		})
+	})
+	t.Run("testSyncArchive", func(t *testing.T) {
+		t.Run("TestSyncLeaveSection", func(t *testing.T) {
+			// with users: @tSyncArchive01alice:hs1
+			// contains 3 subtests, sequential
+			runtime.SkipIf(t, runtime.Dendrite) // FIXME: https://github.com/matrix-org/dendrite/issues/1323
+			t.Parallel()
+			testSyncLeaveSection(t, deployment)
+		})
+		t.Run("GappedSyncLeaveSection", func(t *testing.T) {
+			// will create users: @tSyncArchive02alice:hs1
+			runtime.SkipIf(t, runtime.Dendrite) // FIXME: https://github.com/matrix-org/dendrite/issues/1323
+			t.Parallel()
+			testGappedSyncLeaveSection(t, deployment)
+		})
+		t.Run("TestArchivedRoomsHistory", func(t *testing.T) {
+			// with users: @tSyncArchive03alice:hs1 and @tSyncArchive03bob:hs1
+			runtime.SkipIf(t, runtime.Dendrite) // FIXME: https://github.com/matrix-org/dendrite/issues/1323
+			t.Parallel()
+			testArchivedRoomsHistory(t, deployment)
+		})
+		t.Run("TestOlderLeftRoomsNotInLeaveSection", func(t *testing.T) {
+			// with users: @tSyncArchive04alice:hs1 and @tSyncArchive04bob:hs1
+			runtime.SkipIf(t, runtime.Dendrite) // FIXME: https://github.com/matrix-org/dendrite/issues/1323
+			t.Parallel()
+			testOlderLeftRoomsNotInLeaveSection(t, deployment)
+		})
+		t.Run("TestLeaveEventVisibility", func(t *testing.T) {
+			// will create users: @tSyncArchive05alice:hs1 and @tSyncArchive05bob:hs1
+			runtime.SkipIf(t, runtime.Dendrite) // FIXME: https://github.com/matrix-org/dendrite/issues/1323
+			t.Parallel()
+			testLeaveEventVisibility(t, deployment)
+		})
+		t.Run("TestLeaveEventInviteRejection", func(t *testing.T) {
+			// will create users: @tSyncArchive06alice:hs1 and @tSyncArchive06bob:hs1
+			runtime.SkipIf(t, runtime.Dendrite) // FIXME: https://github.com/matrix-org/dendrite/issues/1323
+			t.Parallel()
+			testLeaveEventInviteRejection(t, deployment)
+		})
+	})
+	t.Run("Errata", func(t *testing.T) {
+		t.Run("TestCumulativeJoinLeaveJoinSync", func(t *testing.T) {
+			t.Parallel()
+			testCumulativeJoinLeaveJoinSync(t, deployment)
+		})
+		t.Run("TestTentativeEventualJoiningAfterRejecting", func(t *testing.T) {
+			t.Parallel()
+			testTentativeEventualJoiningAfterRejecting(t, deployment)
+		})
+	})
+
+}
+// Abstracted tests below
+
+// sytest: Can sync a joined room
+func testSyncJoinedRoom(t *testing.T, deployment *docker.Deployment) {
+	alice := deployment.NewUser(t, "tSync01Alice", "hs1")
+	filterID := createFilter(t, alice, map[string]interface{}{
+		"room": map[string]interface{}{
+			"timeline": map[string]interface{}{
+				"limit": 10,
+			},
+		},
+	})
+
+	roomID := alice.CreateRoom(t, struct{}{})
+	alice.MustSyncUntil(t, client.SyncReq{}, client.SyncJoinedTo(alice.UserID, roomID))
+	res, nextBatch := alice.MustSync(t, client.SyncReq{Filter: filterID})
+	// check all required fields exist
+	checkJoinFieldsExist(t, res, roomID)
+	// sync again
+	res, _ = alice.MustSync(t, client.SyncReq{Filter: filterID, Since: nextBatch})
+	if res.Get("rooms.join." + client.GjsonEscape(roomID)).Exists() {
+		t.Errorf("unchanged room %s should not be in the sync", roomID)
+	}
+
+}
+
+// sytest: Full state sync includes joined rooms
+func testSyncIncludesJoinedRooms(t *testing.T, deployment *docker.Deployment) {
+	alice := deployment.NewUser(t, "tSync02Alice", "hs1")
+	filterID := createFilter(t, alice, map[string]interface{}{
+		"room": map[string]interface{}{
+			"timeline": map[string]interface{}{
+				"limit": 10,
+			},
+		},
+	})
+
+	roomID := alice.CreateRoom(t, struct{}{})
+	alice.MustSyncUntil(t, client.SyncReq{}, client.SyncJoinedTo(alice.UserID, roomID))
+	_, nextBatch := alice.MustSync(t, client.SyncReq{Filter: filterID})
+
+	res, _ := alice.MustSync(t, client.SyncReq{Filter: filterID, Since: nextBatch, FullState: true})
+	checkJoinFieldsExist(t, res, roomID)
+
+}
+
+// sytest: Newly joined room is included in an incremental sync
+func testIncSyncIncludesNewlyJoinedRoom(t *testing.T, deployment *docker.Deployment) {
+	alice := deployment.NewUser(t, "tSync03Alice", "hs1")
+	filterID := createFilter(t, alice, map[string]interface{}{
+		"room": map[string]interface{}{
+			"timeline": map[string]interface{}{
+				"limit": 10,
+			},
+		},
+	})
+
+	_, nextBatch := alice.MustSync(t, client.SyncReq{Filter: filterID})
+	roomID := alice.CreateRoom(t, struct{}{})
+	alice.MustSyncUntil(t, client.SyncReq{}, client.SyncJoinedTo(alice.UserID, roomID))
+	res, nextBatch := alice.MustSync(t, client.SyncReq{Filter: filterID, Since: nextBatch})
+	checkJoinFieldsExist(t, res, roomID)
+	res, _ = alice.MustSync(t, client.SyncReq{Filter: filterID, Since: nextBatch})
+	if res.Get("rooms.join." + client.GjsonEscape(roomID)).Exists() {
+		t.Errorf("unchanged room %s should not be in the sync", roomID)
+	}
+}
+
+// sytest: Newly joined room has correct timeline in incremental sync
+func testIncSyncCorrectTimelineInNewlyJoinedRoom(t *testing.T, deployment *docker.Deployment) {
+	alice := deployment.NewUser(t, "tSync04Alice", "hs1")
+	bob := deployment.NewUser(t, "tSync04Bob", "hs1")
+
+	filterBob := createFilter(t, bob, map[string]interface{}{
+		"room": map[string]interface{}{
+			"timeline": map[string]interface{}{
+				"limit": 10,
+				"types": []string{"m.room.message"},
+			},
+			"state": map[string]interface{}{
+				"types": []string{},
+			},
+		},
+	})
+
+	roomID := alice.CreateRoom(t, map[string]interface{}{"preset": "public_chat"})
+	alice.MustSyncUntil(t, client.SyncReq{}, client.SyncJoinedTo(alice.UserID, roomID))
+
+	sendMessages(t, alice, roomID, "alice message 1-", 4)
+	_, nextBatch := bob.MustSync(t, client.SyncReq{Filter: filterBob})
+	sendMessages(t, alice, roomID, "alice message 2-", 4)
+	bob.JoinRoom(t, roomID, []string{})
+	alice.MustSyncUntil(t, client.SyncReq{}, client.SyncJoinedTo(bob.UserID, roomID))
+	res, _ := bob.MustSync(t, client.SyncReq{Filter: filterBob, Since: nextBatch})
+	room := res.Get("rooms.join." + client.GjsonEscape(roomID))
+	timeline := room.Get("timeline")
+	limited := timeline.Get("limited").Bool()
+	timelineEvents := timeline.Get("events").Array()
+	for _, event := range timelineEvents {
+		if event.Get("type").Str != "m.room.message" {
+			t.Errorf("Only expected 'm.room.message' events")
+		}
+	}
+	if len(timelineEvents) == 6 {
+		if limited {
+			t.Errorf("Timeline has all the events so shouldn't be limited: %+v", timeline)
+		}
+	} else {
+		if !limited {
+			t.Errorf("Timeline doesn't have all the events so should be limited: %+v", timeline)
+		}
+	}
+}
+
+// sytest: Newly joined room includes presence in incremental sync
+func testIncSyncOwnPresenceInNewlyJoinedRoom(t *testing.T, deployment *docker.Deployment) {
+	alice := deployment.NewUser(t, "tSync05Alice", "hs1")
+	bob := deployment.NewUser(t, "tSync05Bob", "hs1")
+
+	roomID := alice.CreateRoom(t, map[string]interface{}{"preset": "public_chat"})
+	alice.MustSyncUntil(t, client.SyncReq{}, client.SyncJoinedTo(alice.UserID, roomID))
+	_, nextBatch := bob.MustSync(t, client.SyncReq{})
+	bob.JoinRoom(t, roomID, []string{})
+	alice.MustSyncUntil(t, client.SyncReq{}, client.SyncJoinedTo(bob.UserID, roomID))
+	nextBatch = bob.MustSyncUntil(t, client.SyncReq{Since: nextBatch}, func(userID string, sync gjson.Result) error {
+		presence := sync.Get("presence")
+		if len(presence.Get("events").Array()) == 0 {
+			return fmt.Errorf("presence.events is empty: %+v", presence)
+		}
+		usersInPresenceEvents(t, presence, []string{alice.UserID})
+		return nil
+	})
+	// There should be no new presence events
+	res, _ := bob.MustSync(t, client.SyncReq{Since: nextBatch})
+	usersInPresenceEvents(t, res.Get("presence"), []string{})
+}
+
+// sytest: Get presence for newly joined members in incremental sync
+func testIncSyncOthersPresenceNewlyJoinedRoom(t *testing.T, deployment *docker.Deployment) {
+	alice := deployment.NewUser(t, "tSync06Alice", "hs1")
+	bob := deployment.NewUser(t, "tSync06Bob", "hs1")
+
+	roomID := alice.CreateRoom(t, map[string]interface{}{"preset": "public_chat"})
+	nextBatch := alice.MustSyncUntil(t, client.SyncReq{}, client.SyncJoinedTo(alice.UserID, roomID))
+	sendMessages(t, alice, roomID, "dummy message", 1)
+	_, nextBatch = alice.MustSync(t, client.SyncReq{Since: nextBatch})
+	bob.JoinRoom(t, roomID, []string{})
+	alice.MustSyncUntil(t, client.SyncReq{}, client.SyncJoinedTo(bob.UserID, roomID))
+
+	// wait until there are presence events
+	nextBatch = alice.MustSyncUntil(t, client.SyncReq{Since: nextBatch}, func(userID string, sync gjson.Result) error {
+		presence := sync.Get("presence")
+		if len(presence.Get("events").Array()) == 0 {
+			return fmt.Errorf("presence.events is empty: %+v", presence)
+		}
+		usersInPresenceEvents(t, presence, []string{bob.UserID})
+		return nil
+	})
+	// There should be no new presence events
+	res, _ := alice.MustSync(t, client.SyncReq{Since: nextBatch})
+	usersInPresenceEvents(t, res.Get("presence"), []string{})
+}
+
+func testSyncSuccessEvenIfPointingToRedactionOfUnknownEvent(t *testing.T, deployment *docker.Deployment) {
+	// this is a regression test for https://github.com/matrix-org/synapse/issues/12864
+	//
+	// The idea here is that we need a sync token which points to a redaction
+	// for an event which doesn't exist. Such a redaction may not be served to
+	// the client. This can lead to server bugs when the server tries to fetch
+	// the event corresponding to the sync token.
+	//
+	// The C-S API does not permit us to generate such a redaction event, so
+	// we have to poke it in from a federated server.
+	//
+	// The situation is complicated further by the very fact that we
+	// cannot see the faulty redaction, and therefore cannot tell whether
+	// our sync token includes it or not. The normal trick here would be
+	// to send another (regular) event as a sentinel, and then if that sentinel
+	// is returned by /sync, we can be sure the faulty event has also been
+	// processed. However, that doesn't work here, because doing so will mean
+	// that the sync token points to the sentinel rather than the redaction,
+	// negating the whole point of the test.
+	//
+	// Instead, as a rough proxy, we send a sentinel in a *different* room.
+	// There is no guarantee that the target server will process the events
+	// in the order we send them, but in practice it seems to get close
+	// enough.
+
+	alice := deployment.NewUser(t, "tSync07Alice", "hs1")
+
+	filterID := createFilter(t, alice, map[string]interface{}{
+		"room": map[string]interface{}{
+			"timeline": map[string]interface{}{
+				"limit": 10,
+			},
+		},
+	})
+
+	// alice creates two rooms, which charlie (on our test server) joins
+	srv := federation.NewServer(t, deployment,
+		federation.HandleKeyRequests(),
+		federation.HandleTransactionRequests(nil, nil),
+	)
+	cancel := srv.Listen()
+	defer cancel()
+
+	charlie := srv.UserID("charlie")
+
+	redactionRoomID := alice.CreateRoom(t, map[string]interface{}{"preset": "public_chat"})
+	redactionRoom := srv.MustJoinRoom(t, deployment, "hs1", redactionRoomID, charlie)
+
+	sentinelRoomID := alice.CreateRoom(t, map[string]interface{}{"preset": "public_chat"})
+	sentinelRoom := srv.MustJoinRoom(t, deployment, "hs1", sentinelRoomID, charlie)
+
+	// charlie creates a bogus redaction, which he sends out, followed by
+	// a good event - in another room - to act as a sentinel. It's not
+	// guaranteed, but hopefully if the sentinel is received, so was the
+	// redaction.
+	redactionEvent := srv.MustCreateEvent(t, redactionRoom, b.Event{
+		Type:    "m.room.redaction",
+		Sender:  charlie,
+		Content: map[string]interface{}{},
+		Redacts: "$12345",
+	})
+	redactionRoom.AddEvent(redactionEvent)
+	t.Logf("Created redaction event %s", redactionEvent.EventID())
+	srv.MustSendTransaction(t, deployment, "hs1", []json.RawMessage{redactionEvent.JSON()}, nil)
+
+	sentinelEvent := srv.MustCreateEvent(t, sentinelRoom, b.Event{
+		Type:    "m.room.test",
+		Sender:  charlie,
+		Content: map[string]interface{}{"body": "1234"},
+	})
+	sentinelRoom.AddEvent(sentinelEvent)
+	t.Logf("Created sentinel event %s", sentinelEvent.EventID())
+	srv.MustSendTransaction(t, deployment, "hs1", []json.RawMessage{redactionEvent.JSON(), sentinelEvent.JSON()}, nil)
+
+	// wait for the sentinel to arrive
+	nextBatch := alice.MustSyncUntil(t, client.SyncReq{}, client.SyncTimelineHasEventID(sentinelRoomID, sentinelEvent.EventID()))
+
+	// charlie sends another batch of events to force a gappy sync.
+	// We have to send 11 events to force a gap, since we use a filter with a timeline limit of 10 events.
+	pdus := make([]json.RawMessage, 11)
+	var lastSentEventId string
+	for i := range pdus {
+		ev := srv.MustCreateEvent(t, redactionRoom, b.Event{
+			Type:    "m.room.message",
+			Sender:  charlie,
+			Content: map[string]interface{}{},
+		})
+		redactionRoom.AddEvent(ev)
+		pdus[i] = ev.JSON()
+		lastSentEventId = ev.EventID()
+	}
+	srv.MustSendTransaction(t, deployment, "hs1", pdus, nil)
+	t.Logf("Sent filler events, with final event %s", lastSentEventId)
+
+	// sync, starting from the same ?since each time, until the final message turns up.
+	// This is basically an inlining of MustSyncUntil, with the key difference that we
+	// keep the same ?since each time, instead of incrementally syncing on each pass.
+	numResponsesReturned := 0
+	start := time.Now()
+	t.Logf("Will sync with since=%s", nextBatch)
+
+	// This part of the test is flaky for workerised Synapse with the default 5 second timeout,
+	// so bump it up to 10 seconds.
+	alice.SyncUntilTimeout = 10 * time.Second
+
+	for {
+		if time.Since(start) > alice.SyncUntilTimeout {
+			t.Fatalf("%s: timed out after %v. Seen %d /sync responses", alice.UserID, time.Since(start), numResponsesReturned)
+		}
+		// sync, using a filter with a limit smaller than the number of PDUs we sent.
+		syncResponse, _ := alice.MustSync(t, client.SyncReq{Filter: filterID, Since: nextBatch})
+		numResponsesReturned += 1
+		timeline := syncResponse.Get("rooms.join." + client.GjsonEscape(redactionRoomID) + ".timeline")
+		timelineEvents := timeline.Get("events").Array()
+
+		if len(timelineEvents) > 0 {
+			lastEventIdInSync := timelineEvents[len(timelineEvents)-1].Get("event_id").String()
+			t.Logf("Iteration %d: /sync returned %d events, with final event %s", numResponsesReturned, len(timelineEvents), lastEventIdInSync)
+
+			if lastEventIdInSync == lastSentEventId {
+				// check we actually got a gappy sync - else this test isn't testing the right thing
+				if !timeline.Get("limited").Bool() {
+					t.Fatalf("Not a gappy sync after redaction")
+				}
+				break
+			}
+		} else {
+			t.Logf("Iteration %d: /sync returned %d events", numResponsesReturned, len(timelineEvents))
+		}
+
+	}
+
+	// that's it - we successfully did a gappy sync.
+
+}
+
+// Test presence from people in 2 different rooms in incremental sync
+func testPresenceSyncDifferentRooms(t *testing.T, deployment *docker.Deployment) {
+	alice := deployment.NewUser(t, "tSync09Alice", "hs1")
+	bob := deployment.NewUser(t, "tSync09Bob", "hs1")
+
+	charlie := deployment.NewUser(t, "tSync09Charlie", "hs1")
+
+	// Alice creates two rooms: one with her and Bob, and a second with her and Charlie.
+	bobRoomID := alice.CreateRoom(t, struct{}{})
+	charlieRoomID := alice.CreateRoom(t, struct{}{})
+	nextBatch := alice.MustSyncUntil(t, client.SyncReq{}, client.SyncJoinedTo(alice.UserID, bobRoomID), client.SyncJoinedTo(alice.UserID, charlieRoomID))
+
+	alice.InviteRoom(t, bobRoomID, bob.UserID)
+	alice.InviteRoom(t, charlieRoomID, charlie.UserID)
+	bob.JoinRoom(t, bobRoomID, nil)
+	charlie.JoinRoom(t, charlieRoomID, nil)
+
+	nextBatch = alice.MustSyncUntil(t,
+		client.SyncReq{Since: nextBatch},
+		client.SyncJoinedTo(bob.UserID, bobRoomID),
+		client.SyncJoinedTo(charlie.UserID, charlieRoomID),
+	)
+
+	// Bob and Charlie mark themselves as online.
+	reqBody := client.WithJSONBody(t, map[string]interface{}{
+		"presence": "online",
+	})
+	bob.DoFunc(t, "PUT", []string{"_matrix", "client", "v3", "presence", bob.UserID, "status"}, reqBody)
+	charlie.DoFunc(t, "PUT", []string{"_matrix", "client", "v3", "presence", charlie.UserID, "status"}, reqBody)
+
+	// Alice should see that Bob and Charlie are online. She may see this happen
+	// simultaneously in one /sync response, or separately in two /sync
+	// responses.
+	seenBobOnline, seenCharlieOnline := false, false
+
+	alice.MustSyncUntil(t, client.SyncReq{Since: nextBatch}, func(clientUserID string, sync gjson.Result) error {
+		presenceArray := sync.Get("presence").Get("events").Array()
+		if len(presenceArray) == 0 {
+			return fmt.Errorf("presence.events is empty")
+		}
+		for _, x := range presenceArray {
+			if x.Get("content").Get("presence").Str != "online" {
+				continue
+			}
+			if x.Get("sender").Str == bob.UserID {
+				seenBobOnline = true
+			}
+			if x.Get("sender").Str == charlie.UserID {
+				seenCharlieOnline = true
+			}
+			if seenBobOnline && seenCharlieOnline {
+				return nil
+			}
+		}
+		return fmt.Errorf("all users not present yet, bob %t charlie %t", seenBobOnline, seenCharlieOnline)
+	})
+}
+
+func testRoomSummary(t *testing.T, deployment *docker.Deployment) {
+	alice := deployment.NewUser(t, "tSync08Alice", "hs1")
+	bob := deployment.NewUser(t, "tSync08Bob", "hs1")
+
+	_, aliceSince := alice.MustSync(t, client.SyncReq{TimeoutMillis: "0"})
+	roomID := alice.CreateRoom(t, map[string]interface{}{
+		"preset": "public_chat",
+		"invite": []string{bob.UserID},
+	})
+	aliceSince = alice.MustSyncUntil(t, client.SyncReq{Since: aliceSince},
+		client.SyncJoinedTo(alice.UserID, roomID),
+		func(clientUserID string, syncResp gjson.Result) error {
+			summary := syncResp.Get("rooms.join." + client.GjsonEscape(roomID) + ".summary")
+			invitedUsers := summary.Get(client.GjsonEscape("m.invited_member_count")).Int()
+			joinedUsers := summary.Get(client.GjsonEscape("m.joined_member_count")).Int()
+			// We expect there to be one joined and one invited user
+			if invitedUsers != 1 || joinedUsers != 1 {
+				return fmt.Errorf("expected one invited and one joined user, got %d and %d: %v", invitedUsers, joinedUsers, summary.Raw)
+			}
+			return nil
+		},
+	)
+
+	joinedCheck := func(clientUserID string, syncResp gjson.Result) error {
+		summary := syncResp.Get("rooms.join." + client.GjsonEscape(roomID) + ".summary")
+		invitedUsers := summary.Get(client.GjsonEscape("m.invited_member_count")).Int()
+		joinedUsers := summary.Get(client.GjsonEscape("m.joined_member_count")).Int()
+		// We expect there to be two joined and no invited user
+		if invitedUsers != 0 || joinedUsers != 2 {
+			return fmt.Errorf("expected no invited and two joined user, got %d and %d: %v", invitedUsers, joinedUsers, summary.Raw)
+		}
+		return nil
+	}
+
+	sinceToken := bob.MustSyncUntil(t, client.SyncReq{}, client.SyncInvitedTo(bob.UserID, roomID))
+	bob.JoinRoom(t, roomID, []string{})
+	// Verify Bob sees the correct room summary
+	bob.MustSyncUntil(t, client.SyncReq{Since: sinceToken}, client.SyncJoinedTo(bob.UserID, roomID), joinedCheck)
+	// .. and Alice as well.
+	alice.MustSyncUntil(t, client.SyncReq{Since: aliceSince}, client.SyncJoinedTo(bob.UserID, roomID), joinedCheck)
+}
+
+// Observes "first bug" from https://github.com/matrix-org/dendrite/pull/1394#issuecomment-687056673
+func testCumulativeJoinLeaveJoinSync(t *testing.T, deployment *docker.Deployment) {
+	alice := deployment.NewUser(t, "tSyncErrata01Alice", "hs1")
+	bob := deployment.NewUser(t, "tSyncErrata01Bob", "hs1")
 
 	roomID := bob.CreateRoom(t, map[string]interface{}{
 		"preset": "public_chat",
@@ -53,12 +561,9 @@ func TestCumulativeJoinLeaveJoinSync(t *testing.T) {
 }
 
 // Observes "second bug" from https://github.com/matrix-org/dendrite/pull/1394#issuecomment-687056673
-func TestTentativeEventualJoiningAfterRejecting(t *testing.T) {
-	deployment := Deploy(t, b.BlueprintOneToOneRoom)
-	defer deployment.Destroy(t)
-
-	alice := deployment.Client(t, "hs1", "@alice:hs1")
-	bob := deployment.Client(t, "hs1", "@bob:hs1")
+func testTentativeEventualJoiningAfterRejecting(t *testing.T, deployment *docker.Deployment) {
+	alice := deployment.NewUser(t, "tSyncErrata02Alice", "hs1")
+	bob := deployment.NewUser(t, "tSyncErrata02Bob", "hs1")
 
 	roomID := alice.CreateRoom(t, map[string]interface{}{
 		"preset": "public_chat",
@@ -101,400 +606,6 @@ func TestTentativeEventualJoiningAfterRejecting(t *testing.T) {
 	}
 }
 
-func TestNewSync(t *testing.T) {
-	runtime.SkipIf(t, runtime.Dendrite) // FIXME: https://github.com/matrix-org/dendrite/issues/1324
-	// sytest: Can sync
-	deployment := Deploy(t, b.BlueprintOneToOneRoom)
-	defer deployment.Destroy(t)
-	alice := deployment.Client(t, "hs1", "@alice:hs1")
-	bob := deployment.Client(t, "hs1", "@bob:hs1")
-
-	filterID := createFilter(t, alice, map[string]interface{}{
-		"room": map[string]interface{}{
-			"timeline": map[string]interface{}{
-				"limit": 10,
-			},
-		},
-	})
-
-	t.Run("parallel", func(t *testing.T) {
-		// sytest: Can sync a joined room
-		t.Run("Can sync a joined room", func(t *testing.T) {
-			t.Parallel()
-			roomID := alice.CreateRoom(t, struct{}{})
-			alice.MustSyncUntil(t, client.SyncReq{}, client.SyncJoinedTo(alice.UserID, roomID))
-			res, nextBatch := alice.MustSync(t, client.SyncReq{Filter: filterID})
-			// check all required fields exist
-			checkJoinFieldsExist(t, res, roomID)
-			// sync again
-			res, _ = alice.MustSync(t, client.SyncReq{Filter: filterID, Since: nextBatch})
-			if res.Get("rooms.join." + client.GjsonEscape(roomID)).Exists() {
-				t.Errorf("unchanged room %s should not be in the sync", roomID)
-			}
-		})
-		// sytest: Full state sync includes joined rooms
-		t.Run("Full state sync includes joined rooms", func(t *testing.T) {
-			t.Parallel()
-			roomID := alice.CreateRoom(t, struct{}{})
-			alice.MustSyncUntil(t, client.SyncReq{}, client.SyncJoinedTo(alice.UserID, roomID))
-			_, nextBatch := alice.MustSync(t, client.SyncReq{Filter: filterID})
-
-			res, _ := alice.MustSync(t, client.SyncReq{Filter: filterID, Since: nextBatch, FullState: true})
-			checkJoinFieldsExist(t, res, roomID)
-		})
-		// sytest: Newly joined room is included in an incremental sync
-		t.Run("Newly joined room is included in an incremental sync", func(t *testing.T) {
-			t.Parallel()
-			_, nextBatch := alice.MustSync(t, client.SyncReq{Filter: filterID})
-			roomID := alice.CreateRoom(t, struct{}{})
-			alice.MustSyncUntil(t, client.SyncReq{}, client.SyncJoinedTo(alice.UserID, roomID))
-			res, nextBatch := alice.MustSync(t, client.SyncReq{Filter: filterID, Since: nextBatch})
-			checkJoinFieldsExist(t, res, roomID)
-			res, _ = alice.MustSync(t, client.SyncReq{Filter: filterID, Since: nextBatch})
-			if res.Get("rooms.join." + client.GjsonEscape(roomID)).Exists() {
-				t.Errorf("unchanged room %s should not be in the sync", roomID)
-			}
-		})
-		// sytest: Newly joined room has correct timeline in incremental sync
-		t.Run("Newly joined room has correct timeline in incremental sync", func(t *testing.T) {
-			runtime.SkipIf(t, runtime.Dendrite) // FIXME: https://github.com/matrix-org/dendrite/issues/1324
-			t.Parallel()
-
-			filterBob := createFilter(t, bob, map[string]interface{}{
-				"room": map[string]interface{}{
-					"timeline": map[string]interface{}{
-						"limit": 10,
-						"types": []string{"m.room.message"},
-					},
-					"state": map[string]interface{}{
-						"types": []string{},
-					},
-				},
-			})
-
-			roomID := alice.CreateRoom(t, map[string]interface{}{"preset": "public_chat"})
-			alice.MustSyncUntil(t, client.SyncReq{}, client.SyncJoinedTo(alice.UserID, roomID))
-
-			sendMessages(t, alice, roomID, "alice message 1-", 4)
-			_, nextBatch := bob.MustSync(t, client.SyncReq{Filter: filterBob})
-			sendMessages(t, alice, roomID, "alice message 2-", 4)
-			bob.JoinRoom(t, roomID, []string{})
-			alice.MustSyncUntil(t, client.SyncReq{}, client.SyncJoinedTo(bob.UserID, roomID))
-			res, _ := bob.MustSync(t, client.SyncReq{Filter: filterBob, Since: nextBatch})
-			room := res.Get("rooms.join." + client.GjsonEscape(roomID))
-			timeline := room.Get("timeline")
-			limited := timeline.Get("limited").Bool()
-			timelineEvents := timeline.Get("events").Array()
-			for _, event := range timelineEvents {
-				if event.Get("type").Str != "m.room.message" {
-					t.Errorf("Only expected 'm.room.message' events")
-				}
-			}
-			if len(timelineEvents) == 6 {
-				if limited {
-					t.Errorf("Timeline has all the events so shouldn't be limited: %+v", timeline)
-				}
-			} else {
-				if !limited {
-					t.Errorf("Timeline doesn't have all the events so should be limited: %+v", timeline)
-				}
-			}
-		})
-		// sytest: Newly joined room includes presence in incremental sync
-		t.Run("Newly joined room includes presence in incremental sync", func(t *testing.T) {
-			runtime.SkipIf(t, runtime.Dendrite) // FIXME: https://github.com/matrix-org/dendrite/issues/1324
-			t.Parallel()
-			roomID := alice.CreateRoom(t, map[string]interface{}{"preset": "public_chat"})
-			alice.MustSyncUntil(t, client.SyncReq{}, client.SyncJoinedTo(alice.UserID, roomID))
-			_, nextBatch := bob.MustSync(t, client.SyncReq{})
-			bob.JoinRoom(t, roomID, []string{})
-			alice.MustSyncUntil(t, client.SyncReq{}, client.SyncJoinedTo(bob.UserID, roomID))
-			nextBatch = bob.MustSyncUntil(t, client.SyncReq{Since: nextBatch}, func(userID string, sync gjson.Result) error {
-				presence := sync.Get("presence")
-				if len(presence.Get("events").Array()) == 0 {
-					return fmt.Errorf("presence.events is empty: %+v", presence)
-				}
-				usersInPresenceEvents(t, presence, []string{alice.UserID})
-				return nil
-			})
-			// There should be no new presence events
-			res, _ := bob.MustSync(t, client.SyncReq{Since: nextBatch})
-			usersInPresenceEvents(t, res.Get("presence"), []string{})
-		})
-		// sytest: Get presence for newly joined members in incremental sync
-		t.Run("Get presence for newly joined members in incremental sync", func(t *testing.T) {
-			runtime.SkipIf(t, runtime.Dendrite) // FIXME: https://github.com/matrix-org/dendrite/issues/1324
-			t.Parallel()
-			roomID := alice.CreateRoom(t, map[string]interface{}{"preset": "public_chat"})
-			nextBatch := alice.MustSyncUntil(t, client.SyncReq{}, client.SyncJoinedTo(alice.UserID, roomID))
-			sendMessages(t, alice, roomID, "dummy message", 1)
-			_, nextBatch = alice.MustSync(t, client.SyncReq{Since: nextBatch})
-			bob.JoinRoom(t, roomID, []string{})
-			alice.MustSyncUntil(t, client.SyncReq{}, client.SyncJoinedTo(bob.UserID, roomID))
-
-			// wait until there are presence events
-			nextBatch = alice.MustSyncUntil(t, client.SyncReq{Since: nextBatch}, func(userID string, sync gjson.Result) error {
-				presence := sync.Get("presence")
-				if len(presence.Get("events").Array()) == 0 {
-					return fmt.Errorf("presence.events is empty: %+v", presence)
-				}
-				usersInPresenceEvents(t, presence, []string{bob.UserID})
-				return nil
-			})
-			// There should be no new presence events
-			res, _ := alice.MustSync(t, client.SyncReq{Since: nextBatch})
-			usersInPresenceEvents(t, res.Get("presence"), []string{})
-		})
-
-		t.Run("sync should succeed even if the sync token points to a redaction of an unknown event", func(t *testing.T) {
-			// this is a regression test for https://github.com/matrix-org/synapse/issues/12864
-			//
-			// The idea here is that we need a sync token which points to a redaction
-			// for an event which doesn't exist. Such a redaction may not be served to
-			// the client. This can lead to server bugs when the server tries to fetch
-			// the event corresponding to the sync token.
-			//
-			// The C-S API does not permit us to generate such a redaction event, so
-			// we have to poke it in from a federated server.
-			//
-			// The situation is complicated further by the very fact that we
-			// cannot see the faulty redaction, and therefore cannot tell whether
-			// our sync token includes it or not. The normal trick here would be
-			// to send another (regular) event as a sentinel, and then if that sentinel
-			// is returned by /sync, we can be sure the faulty event has also been
-			// processed. However, that doesn't work here, because doing so will mean
-			// that the sync token points to the sentinel rather than the redaction,
-			// negating the whole point of the test.
-			//
-			// Instead, as a rough proxy, we send a sentinel in a *different* room.
-			// There is no guarantee that the target server will process the events
-			// in the order we send them, but in practice it seems to get close
-			// enough.
-
-			t.Parallel()
-
-			// alice creates two rooms, which charlie (on our test server) joins
-			srv := federation.NewServer(t, deployment,
-				federation.HandleKeyRequests(),
-				federation.HandleTransactionRequests(nil, nil),
-			)
-			cancel := srv.Listen()
-			defer cancel()
-
-			charlie := srv.UserID("charlie")
-
-			redactionRoomID := alice.CreateRoom(t, map[string]interface{}{"preset": "public_chat"})
-			redactionRoom := srv.MustJoinRoom(t, deployment, "hs1", redactionRoomID, charlie)
-
-			sentinelRoomID := alice.CreateRoom(t, map[string]interface{}{"preset": "public_chat"})
-			sentinelRoom := srv.MustJoinRoom(t, deployment, "hs1", sentinelRoomID, charlie)
-
-			// charlie creates a bogus redaction, which he sends out, followed by
-			// a good event - in another room - to act as a sentinel. It's not
-			// guaranteed, but hopefully if the sentinel is received, so was the
-			// redaction.
-			redactionEvent := srv.MustCreateEvent(t, redactionRoom, b.Event{
-				Type:    "m.room.redaction",
-				Sender:  charlie,
-				Content: map[string]interface{}{},
-				Redacts: "$12345",
-			})
-			redactionRoom.AddEvent(redactionEvent)
-			t.Logf("Created redaction event %s", redactionEvent.EventID())
-			srv.MustSendTransaction(t, deployment, "hs1", []json.RawMessage{redactionEvent.JSON()}, nil)
-
-			sentinelEvent := srv.MustCreateEvent(t, sentinelRoom, b.Event{
-				Type:    "m.room.test",
-				Sender:  charlie,
-				Content: map[string]interface{}{"body": "1234"},
-			})
-			sentinelRoom.AddEvent(sentinelEvent)
-			t.Logf("Created sentinel event %s", sentinelEvent.EventID())
-			srv.MustSendTransaction(t, deployment, "hs1", []json.RawMessage{redactionEvent.JSON(), sentinelEvent.JSON()}, nil)
-
-			// wait for the sentinel to arrive
-			nextBatch := alice.MustSyncUntil(t, client.SyncReq{}, client.SyncTimelineHasEventID(sentinelRoomID, sentinelEvent.EventID()))
-
-			// charlie sends another batch of events to force a gappy sync.
-			// We have to send 11 events to force a gap, since we use a filter with a timeline limit of 10 events.
-			pdus := make([]json.RawMessage, 11)
-			var lastSentEventId string
-			for i := range pdus {
-				ev := srv.MustCreateEvent(t, redactionRoom, b.Event{
-					Type:    "m.room.message",
-					Sender:  charlie,
-					Content: map[string]interface{}{},
-				})
-				redactionRoom.AddEvent(ev)
-				pdus[i] = ev.JSON()
-				lastSentEventId = ev.EventID()
-			}
-			srv.MustSendTransaction(t, deployment, "hs1", pdus, nil)
-			t.Logf("Sent filler events, with final event %s", lastSentEventId)
-
-			// sync, starting from the same ?since each time, until the final message turns up.
-			// This is basically an inlining of MustSyncUntil, with the key difference that we
-			// keep the same ?since each time, instead of incrementally syncing on each pass.
-			numResponsesReturned := 0
-			start := time.Now()
-			t.Logf("Will sync with since=%s", nextBatch)
-
-			// This part of the test is flaky for workerised Synapse with the default 5 second timeout,
-			// so bump it up to 10 seconds.
-			alice.SyncUntilTimeout = 10 * time.Second
-
-			for {
-				if time.Since(start) > alice.SyncUntilTimeout {
-					t.Fatalf("%s: timed out after %v. Seen %d /sync responses", alice.UserID, time.Since(start), numResponsesReturned)
-				}
-				// sync, using a filter with a limit smaller than the number of PDUs we sent.
-				syncResponse, _ := alice.MustSync(t, client.SyncReq{Filter: filterID, Since: nextBatch})
-				numResponsesReturned += 1
-				timeline := syncResponse.Get("rooms.join." + client.GjsonEscape(redactionRoomID) + ".timeline")
-				timelineEvents := timeline.Get("events").Array()
-
-				if len(timelineEvents) > 0 {
-					lastEventIdInSync := timelineEvents[len(timelineEvents)-1].Get("event_id").String()
-					t.Logf("Iteration %d: /sync returned %d events, with final event %s", numResponsesReturned, len(timelineEvents), lastEventIdInSync)
-
-					if lastEventIdInSync == lastSentEventId {
-						// check we actually got a gappy sync - else this test isn't testing the right thing
-						if !timeline.Get("limited").Bool() {
-							t.Fatalf("Not a gappy sync after redaction")
-						}
-						break
-					}
-				} else {
-					t.Logf("Iteration %d: /sync returned %d events", numResponsesReturned, len(timelineEvents))
-				}
-
-			}
-
-			// that's it - we successfully did a gappy sync.
-		})
-		t.Run("TestRoomSummary", func(t *testing.T) {
-			runtime.SkipIf(t, runtime.Synapse) // Currently more of a Dendrite test, so skip on Synapse
-			t.Parallel()
-			testRoomSummary(t, alice, bob)
-		})
-		t.Run("TestPresenceSyncDifferentRooms", func(t *testing.T) {
-			t.Parallel()
-			charlie := deployment.NewUser(t, "charlie", "hs1")
-			testPresenceSyncDifferentRooms(t, alice, bob, charlie)
-		})
-		// sytest: Can create filter
-		// sytest: Can download filter
-		t.Run("Can create/download filter", func(t *testing.T) {
-			t.Parallel()
-			testSyncCreateAndDownloadFilter(t, alice)
-		})
-		t.Run("", func(t *testing.T) {
-
-			testSyncArchive(t, deployment)
-		})
-	})
-}
-// Abstracted tests below
-
-// Test presence from people in 2 different rooms in incremental sync
-func testPresenceSyncDifferentRooms(t *testing.T, alice *client.CSAPI, bob *client.CSAPI, charlie *client.CSAPI) {
-	//deployment := Deploy(t, b.BlueprintOneToOneRoom)
-	//defer deployment.Destroy(t)
-
-	//alice := deployment.Client(t, "hs1", "@alice:hs1")
-	//bob := deployment.Client(t, "hs1", "@bob:hs1")
-
-	//charlie := deployment.NewUser(t, "charlie", "hs1")
-
-	// Alice creates two rooms: one with her and Bob, and a second with her and Charlie.
-	bobRoomID := alice.CreateRoom(t, struct{}{})
-	charlieRoomID := alice.CreateRoom(t, struct{}{})
-	nextBatch := alice.MustSyncUntil(t, client.SyncReq{}, client.SyncJoinedTo(alice.UserID, bobRoomID), client.SyncJoinedTo(alice.UserID, charlieRoomID))
-
-	alice.InviteRoom(t, bobRoomID, bob.UserID)
-	alice.InviteRoom(t, charlieRoomID, charlie.UserID)
-	bob.JoinRoom(t, bobRoomID, nil)
-	charlie.JoinRoom(t, charlieRoomID, nil)
-
-	nextBatch = alice.MustSyncUntil(t,
-		client.SyncReq{Since: nextBatch},
-		client.SyncJoinedTo(bob.UserID, bobRoomID),
-		client.SyncJoinedTo(charlie.UserID, charlieRoomID),
-	)
-
-	// Bob and Charlie mark themselves as online.
-	reqBody := client.WithJSONBody(t, map[string]interface{}{
-		"presence": "online",
-	})
-	bob.DoFunc(t, "PUT", []string{"_matrix", "client", "v3", "presence", "@bob:hs1", "status"}, reqBody)
-	charlie.DoFunc(t, "PUT", []string{"_matrix", "client", "v3", "presence", "@charlie:hs1", "status"}, reqBody)
-
-	// Alice should see that Bob and Charlie are online. She may see this happen
-	// simultaneously in one /sync response, or separately in two /sync
-	// responses.
-	seenBobOnline, seenCharlieOnline := false, false
-
-	alice.MustSyncUntil(t, client.SyncReq{Since: nextBatch}, func(clientUserID string, sync gjson.Result) error {
-		presenceArray := sync.Get("presence").Get("events").Array()
-		if len(presenceArray) == 0 {
-			return fmt.Errorf("presence.events is empty")
-		}
-		for _, x := range presenceArray {
-			if x.Get("content").Get("presence").Str != "online" {
-				continue
-			}
-			if x.Get("sender").Str == bob.UserID {
-				seenBobOnline = true
-			}
-			if x.Get("sender").Str == charlie.UserID {
-				seenCharlieOnline = true
-			}
-			if seenBobOnline && seenCharlieOnline {
-				return nil
-			}
-		}
-		return fmt.Errorf("all users not present yet, bob %t charlie %t", seenBobOnline, seenCharlieOnline)
-	})
-}
-
-func testRoomSummary(t *testing.T, alice *client.CSAPI, bob *client.CSAPI) {
-	_, aliceSince := alice.MustSync(t, client.SyncReq{TimeoutMillis: "0"})
-	roomID := alice.CreateRoom(t, map[string]interface{}{
-		"preset": "public_chat",
-		"invite": []string{bob.UserID},
-	})
-	aliceSince = alice.MustSyncUntil(t, client.SyncReq{Since: aliceSince},
-		client.SyncJoinedTo(alice.UserID, roomID),
-		func(clientUserID string, syncResp gjson.Result) error {
-			summary := syncResp.Get("rooms.join." + client.GjsonEscape(roomID) + ".summary")
-			invitedUsers := summary.Get(client.GjsonEscape("m.invited_member_count")).Int()
-			joinedUsers := summary.Get(client.GjsonEscape("m.joined_member_count")).Int()
-			// We expect there to be one joined and one invited user
-			if invitedUsers != 1 || joinedUsers != 1 {
-				return fmt.Errorf("expected one invited and one joined user, got %d and %d: %v", invitedUsers, joinedUsers, summary.Raw)
-			}
-			return nil
-		},
-	)
-
-	joinedCheck := func(clientUserID string, syncResp gjson.Result) error {
-		summary := syncResp.Get("rooms.join." + client.GjsonEscape(roomID) + ".summary")
-		invitedUsers := summary.Get(client.GjsonEscape("m.invited_member_count")).Int()
-		joinedUsers := summary.Get(client.GjsonEscape("m.joined_member_count")).Int()
-		// We expect there to be two joined and no invited user
-		if invitedUsers != 0 || joinedUsers != 2 {
-			return fmt.Errorf("expected no invited and two joined user, got %d and %d: %v", invitedUsers, joinedUsers, summary.Raw)
-		}
-		return nil
-	}
-
-	sinceToken := bob.MustSyncUntil(t, client.SyncReq{}, client.SyncInvitedTo(bob.UserID, roomID))
-	bob.JoinRoom(t, roomID, []string{})
-	// Verify Bob sees the correct room summary
-	bob.MustSyncUntil(t, client.SyncReq{Since: sinceToken}, client.SyncJoinedTo(bob.UserID, roomID), joinedCheck)
-	// .. and Alice as well.
-	alice.MustSyncUntil(t, client.SyncReq{Since: aliceSince}, client.SyncJoinedTo(bob.UserID, roomID), joinedCheck)
-}
 
 // helper functions below
 func sendMessages(t *testing.T, client *client.CSAPI, roomID string, prefix string, count int) {
