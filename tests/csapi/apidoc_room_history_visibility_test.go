@@ -2,6 +2,7 @@ package csapi_tests
 
 import (
 	"net/http"
+	"net/url"
 	"testing"
 
 	"github.com/tidwall/gjson"
@@ -298,3 +299,101 @@ func TestFetchEventWorldReadable(t *testing.T) {
 		},
 	})
 }
+
+// Tries to fetch an event without having joined, and succeeds.
+// history_visibility: world_readable
+// NOTE: uses older /events api which is deprecated in order to simulate sytest.
+
+// create two new users(hermetics)
+// create world_readable room and join alice
+// alice sends a message so the room has something beyond 'state' to sync.
+// have alice sync until her message shows up(to get the stream_token)
+// have bob call /events to get a sync token and clear out anything up to this point
+// set presence on alice with a status message
+// have alice sync again(this doesn't help the test, it's so I can collect debugging on the Synapse side)
+// call /events on bob with the stream token to get anything new, which should get alice's status message.
+func TestFetchEventWorldReadableUsingDeprecatedEventsEndpoint(t *testing.T) {
+	deployment := Deploy(t, b.BlueprintOneToOneRoom)
+	defer deployment.Destroy(t)
+
+	alice := deployment.NewUser(t, "t01alice", "hs1")
+	bob := deployment.NewUser(t, "t01bob", "hs1")
+
+	roomID := createRoomWithVisibility(t, alice, "world_readable")
+
+	_, BobsSyncToken := bob.MustSync(t, client.SyncReq{TimeoutMillis: "0"})
+	t.Logf("JASON: bob's sync token %v", BobsSyncToken)
+
+	alice.SendEventSynced(t, roomID, b.Event{
+		Type: "m.room.message",
+		Content: map[string]interface{}{
+			"msgtype": "m.text",
+			"body":    "Hello world",
+		},
+	})
+
+	// This starts the actual test. First, get bob a sync token for later.
+	// Apparently, room_id as a query on this endpoint is undocumented and not in the
+	// spec, but works. This *appears* to duplicate how sytest uses this endpoint.
+	query := url.Values{
+		"timeout": []string{"500"},
+		"from": []string{BobsSyncToken},
+		"room_id": []string{roomID},
+	}
+	res := fetchNewEvents(t, bob, query)
+
+	// pull the new sync token out from res
+	res_json := client.ParseJSON(t, res)
+	BobsSyncToken = client.GetJSONFieldStr(t, res_json, "end")
+	t.Logf("JASON: bob's response %s", res_json)
+
+	// grab alice's sync token so we can make sure she sees her own presence
+	_, AlicesSyncToken := alice.MustSync(t, client.SyncReq{TimeoutMillis: "0"})
+
+	// alice sets a presence status message
+	statusMsg := "Update for room members"
+	alice.MustDoFunc(t, "PUT", []string{"_matrix", "client", "v3", "presence", alice.UserID, "status"},
+		client.WithJSONBody(t, map[string]interface{}{
+			"status_msg": statusMsg,
+			"presence":   "online",
+		}),
+	)
+
+	// and then syncs until it shows up. Ultimately, this has no bearing on the test
+	// itself, but allows hitting the UserPresenceSource to check for updates.
+	alice.MustSyncUntil(t, client.SyncReq{Since: AlicesSyncToken},
+			client.SyncPresenceHas(alice.UserID, b.Ptr("online"), func(ev gjson.Result) bool {
+				return ev.Get("content.status_msg").Str == statusMsg
+			}),
+		)
+
+	// reset and get new results, this should pick up alice's status message
+	query["from"] = []string{BobsSyncToken}
+	res = fetchNewEvents(t, bob, query)
+	// pull the new sync token out from res
+	res_json = client.ParseJSON(t, res)
+	BobsSyncToken = client.GetJSONFieldStr(t, res_json, "end")
+
+	t.Logf("JASON: bob's response %s", res_json)
+	t.Logf("JASON: bob's new sync token %s", BobsSyncToken)
+
+	// So this doesn't work right, my JSON matching skills aren't up to par.
+	// Something something read on closed response body something
+	must.MatchResponse(t, res, match.HTTPResponse{
+		StatusCode: 200,
+		JSON: []match.JSON{
+			match.JSONKeyEqual("chunk", map[string]interface{}{
+				"presence": "online",
+				"user_id": alice.UserID,
+				"status_message": statusMsg,
+			}),
+			match.JSONKeyEqual("type", "m.presence"),
+		},
+	})
+
+}
+
+func fetchNewEvents(t *testing.T, c *client.CSAPI, query url.Values) *http.Response {
+	return c.MustDoFunc(t, "GET", []string{"_matrix", "client", "v3", "events"}, client.WithQueries(query))
+}
+
